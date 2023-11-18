@@ -1,59 +1,59 @@
 module Parsers.Combinators
 
-type Parser<'result> = list<char> -> Option<list<char>*'result>
+type Parser<'Result> = char list -> Option<List<char> * 'Result>
 
-let satisfy predicate: Parser<char> =
+let satisfy predicate : Parser<char> =
     fun input ->
         match input with
-        | hd::tl when predicate hd -> Some(tl, hd)
+        | hd :: tl when predicate hd -> Some(tl, hd)
         | _ -> None
 
-let p_char ch: Parser<char> =
-    satisfy (fun x -> ch = x)
+let parseChar ch : Parser<char> = satisfy (fun x -> ch = x)
 
-let p_epsilon:Parser<unit> = fun input -> Some(input,())
+let parseEpsilon: Parser<unit> = fun input -> Some(input, ())
 
-let p_seq (p1: Parser<'r1>) (p2:'r1 -> Parser<'r2>): Parser<'r2> =
+let parseSeq (parser1: Parser<'A>) (parser2: 'A -> Parser<'B>) : Parser<'B> =
     fun input ->
-        match p1 input with
+        match parser1 input with
         | None -> None
-        | Some (rest, result) -> p2 result rest
+        | Some(charList, result) -> parser2 result charList
 
-let p_alt (p1:Parser<'r>) (p2:Parser<'r>): Parser<'r> =
+let parseAlt (parser1: Parser<'A>) (parser2: Parser<'A>) : Parser<'A> =
     fun input ->
-        match p1 input with
-        | None -> p2 input
-        | x -> x
+        match parser1 input with
+        | None -> parser2 input
+        | parsedInput -> parsedInput
 
-let fmap (f:'r1 -> 'r2) (p:Parser<'r1>): Parser<'r2> =
+let fMap (fnc: 'R1 -> 'R2) (parser: Parser<'R1>) : Parser<'R2> =
     fun input ->
-        match p input with
+        match parser input with
         | None -> None
-        | Some(rest, res) -> Some(rest, f res)
+        | Some(charList, result) -> Some(charList, fnc result)
 
-let rec p_many (p:Parser<'r>): Parser<list<'r>> =
-    p_alt (p_seq p (fun res -> fmap (fun tl -> res::tl) (p_many p)))
-          (fmap (fun _ -> []) p_epsilon)
+let rec parseMany (parser: Parser<'A>) : Parser<List<'A>> =
+    parseAlt
+        (parseSeq parser (fun result -> fMap (fun tl -> result :: tl) (parseMany parser)))
+        (fMap (fun _ -> []) parseEpsilon)
 
-let p_some (p:Parser<'r>): Parser<list<'r>> =
-    p_seq p (fun res -> fmap (fun tl -> res::tl) (p_many p))
+let parseSome (parser: Parser<'A>) : Parser<List<'A>> =
+    parseSeq parser (fun result -> fMap (fun tl -> result :: tl) (parseMany parser))
 
-let p_list (p_elem:Parser<'elem>) (p_sep:Parser<unit>) =
-    p_seq p_elem (fun res -> fmap (fun tl -> res :: tl)
-                                  (p_many (p_seq p_sep (fun _ -> p_elem))))
+let parseList (parseElement: Parser<'Element>) (parseSeparator: Parser<unit>) =
+    parseSeq parseElement (fun result ->
+        fMap (fun tl -> result :: tl) (parseMany (parseSeq parseSeparator (fun _ -> parseElement))))
 
-let p_ignore p = fmap (fun _ -> ()) p
+let parseIgnore parser = fMap ignore parser
 
-let p_kw (kw:string): Parser<string> =
+let parseKeyWord (kw: string) : Parser<string> =
     let chars = kw.ToCharArray()
-    Array.fold
-        (fun parser curChar ->
-            p_seq parser (fun res -> fmap (fun char -> char::res) (p_char curChar)))
-        (fmap (fun _ -> []) p_epsilon)
-        chars
-    |> fmap (fun charList -> charList |> List.rev |> Array.ofList |> System.String)
 
+    Array.fold
+        (fun parser currChar -> parseSeq parser (fun result -> fMap (fun char -> char :: result) (parseChar currChar)))
+        (fMap (fun _ -> []) parseEpsilon)
+        chars
+    |> fMap (fun charList -> charList |> List.rev |> Array.ofList |> System.String)
 
 let run =
-    fun (p: Parser<'r>) (input: string) ->
-        p (List.ofArray <| input.ToCharArray())
+    fun (parser: Parser<'R>) (input: string) ->
+        let listOfChars = input.ToCharArray() |> List.ofArray
+        parser listOfChars

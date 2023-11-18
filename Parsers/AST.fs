@@ -1,19 +1,11 @@
 module Parsers.AST
 
-type sourceExpr =
+type SourceExpr =
     | Number of int
-    | Mult of list<sourceExpr>
-    | Add of list<sourceExpr>
+    | Multiply of list<SourceExpr>
+    | Add of list<SourceExpr>
     | Var of string
 
-type sourceAst =
-    | Asgn of string*sourceExpr
-    | Print of sourceExpr
-
-type targetExpr =
-    | TNumber of int
-    | TAdd of list<targetExpr>
-    | TVar of string
-
-type targetAst =
-    | TStmt of string*targetExpr
+type SourceAst =
+    | VarAssignment of string * SourceExpr
+    | Print of SourceExpr
