@@ -47,7 +47,7 @@ relationalOperator = "=" | "<>" | "<=" | "<" | ">=" | ">"
 
 booleanExpression = booleanValue | (arithmeticExpression | identifier) relationalOperator (arithmeticExpression | identifier)
 
-assignment = identifier "=" (arithmeticExpression | identifier | booleanExpression | ifExpression)
+assignment = identifier "=" (arithmeticExpression | identifier | ifExpression)
 
 command = "print:" (arithmeticExpression | identifier)
                    

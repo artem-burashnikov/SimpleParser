@@ -9,9 +9,10 @@ type BooleanOperator =
     | GreaterThanOrEqual
 
 and BooleanExpression =
-    | Expression of BooleanOperator * SourceExpr * SourceExpr
     | True
     | False
+    | Expression of BooleanOperator * SourceExpr * SourceExpr
+
 
 and SourceExpr =
     | Number of int

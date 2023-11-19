@@ -13,14 +13,17 @@ let rec eval (context: Dictionary<_, _>) expr =
             context[varName]
         else
             failwithf $"Var with name {varName} is not declared."
-    | IfThenElse(condition, trueBranch, elseBranch) ->
+    | IfThenElse(condition: BooleanExpression, trueBranch, elseBranch) ->
         let evaluatedCondition =
             match condition with
             | True -> true
             | False -> false
             | Expression(operator, lhs, rhs) ->
-                let evaluatedLhs = eval context lhs
-                let evaluatedRhs = eval context rhs
+                let computations =
+                    [| async { return eval context lhs }; async { return eval context rhs } |]
+
+                let result = computations |> Async.Parallel |> Async.RunSynchronously
+                let evaluatedLhs, evaluatedRhs = result[0], result[1]
 
                 match operator with
                 | LessThanOrEqual -> evaluatedLhs <= evaluatedRhs
@@ -37,7 +40,7 @@ let rec eval (context: Dictionary<_, _>) expr =
 
 let rec evalStmt context stmt =
     match stmt with
-    | VarAssignment(v_name, expr) -> Some(v_name, eval context expr)
+    | VarAssignment(varName, expr) -> Some(varName, eval context expr)
     | Print expr ->
         printfn $"{eval context expr}"
         None
@@ -50,11 +53,11 @@ let evalProgram (statements: list<SourceAst>) =
             let res = evalStmt context stmt
 
             match res with
-            | Some(v_name, res) ->
-                if context.ContainsKey v_name then
-                    context[v_name] <- res
+            | Some(varName, res) ->
+                if context.ContainsKey varName then
+                    context[varName] <- res
                 else
-                    context.Add(v_name, res)
+                    context.Add(varName, res)
             | None -> ()
 
             context)
