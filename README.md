@@ -22,7 +22,44 @@ SPBU 3rd semester homework assignment.
 
 ## Language grammar
 
-TODO
+Definition using [EBNF][grammar-notation] notation:
+
+```ignorelang
+digit = "0" | ... | "9"
+
+nonzeroDigit = "1" | ... | "9"
+
+number = digit | nonzeroDigit { digit }
+
+letter = "a" | ... | "z" | "A" | ... | "Z"
+
+identifier = letter { letter | digit }
+
+factor = identifier | number | factor "*" factor
+
+add = (factor | add) "+" (factor | add)
+
+arithmeticExpression = factor | add
+
+booleanValue = "true" | "false"
+
+relationalOperator = "=" | "<>" | "<=" | "<" | ">=" | ">"
+
+booleanExpression = booleanValue | (arithmeticExpression | identifier) relationalOperator (arithmeticExpression | identifier)
+
+ifExpression = "if" booleanExpression "then" 
+                   {statement} (arithmeticExpression | booleanExpression | ifExpression) 
+               "else"
+                   {statement} (arithmeticExpression | booleanExpression | ifExpression)
+
+assignment = identifier "=" (arithmeticExpression | identifier | booleanExpression | ifExpression)
+
+command = "print:" (arithmeticExpression | identifier)
+
+statement = assignment | command
+
+program = {statement}
+```
 
 ## Getting Started
 
@@ -48,3 +85,4 @@ Distributed under the MIT License. See [LICENSE][license-url] for more informati
 [license-shield]: https://img.shields.io/github/license/artem-burashnikov/SimpleParser.svg?style=for-the-badge
 [license-url]: https://github.com/artem-burashnikov/SimpleParser/blob/main/LICENSE
 [net-link]: https://dotnet.microsoft.com/en-us/download
+[grammar-notation]: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
