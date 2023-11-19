@@ -23,10 +23,55 @@ let parseAssignment =
         parseSeq (parseIgnore (parseChar '=')) (fun _ ->
             fMap (fun expr -> VarAssignment(identifierName, expr)) parseAdd))
 
-let parseKeWordPrint = parseKeyWord "print"
+let parseKeyWordPrint = parseKeyWord "print"
 
 let parsePrint =
-    parseSeq parseKeWordPrint (fun _ -> parseSeq (parseChar ':') (fun _ -> fMap Print parseAdd))
+    parseSeq parseKeyWordPrint (fun _ -> parseSeq (parseChar ':') (fun _ -> fMap Print parseAdd))
+
+let parseBooleanTrue =
+    parseSeq (parseIgnore (parseKeyWord "true")) (fun _ -> fMap (fun _ -> True) parseEpsilon)
+
+let parseBooleanFalse =
+    parseSeq (parseIgnore (parseKeyWord "false")) (fun _ -> fMap (fun _ -> False) parseEpsilon)
+
+let parseBooleanValue = parseAlt parseBooleanTrue parseBooleanFalse
+
+let parseLessThanOrEqual =
+    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> LessThanOrEqual) parseEpsilon)
+
+let parseLessThan =
+    parseSeq (parseIgnore (parseChar '<')) (fun _ -> fMap (fun _ -> LessThan) parseEpsilon)
+
+let parseNotEqual =
+    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
+
+let parseEqual =
+    parseSeq (parseIgnore (parseChar '=')) (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
+
+let parseGreaterThan =
+    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> GreaterThan) parseEpsilon)
+
+let parseGreaterThanOrEqual =
+    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
+
+let parseBooleanOperator =
+    parseAlt
+        parseGreaterThanOrEqual
+        (parseAlt
+            parseGreaterThan
+            (parseAlt
+                parseEqual
+                    (parseAlt
+                        parseNotEqual
+                            (parseAlt
+                                parseLessThan
+                                parseLessThanOrEqual))))
+
+let parseKeyWordIf = parseKeyWord "if"
+
+let parseKeyWordThen = parseKeyWord "then"
+
+let parseKeyWordElse = parseKeyWord "else"
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
