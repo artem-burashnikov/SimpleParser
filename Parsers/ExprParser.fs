@@ -26,7 +26,7 @@ let parseAssignment =
 let parseKeWordPrint = parseKeyWord "print"
 
 let parsePrint =
-    parseSeq parseKeWordPrint (fun _ -> parseSeq (parseChar ':') (fun res -> fMap Print parseAdd))
+    parseSeq parseKeWordPrint (fun _ -> parseSeq (parseChar ':') (fun _ -> fMap Print parseAdd))
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
