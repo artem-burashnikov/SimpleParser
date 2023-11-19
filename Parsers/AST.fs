@@ -13,7 +13,6 @@ and BooleanExpression =
     | False
     | Expression of BooleanOperator * SourceExpr * SourceExpr
 
-
 and SourceExpr =
     | Number of int
     | Multiply of list<SourceExpr>
