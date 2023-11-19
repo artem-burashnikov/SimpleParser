@@ -47,14 +47,14 @@ relationalOperator = "=" | "<>" | "<=" | "<" | ">=" | ">"
 
 booleanExpression = booleanValue | (arithmeticExpression | identifier) relationalOperator (arithmeticExpression | identifier)
 
-ifExpression = "if" booleanExpression "then" 
-                   {statement} (arithmeticExpression | booleanExpression | ifExpression) 
-               "else"
-                   {statement} (arithmeticExpression | booleanExpression | ifExpression)
-
 assignment = identifier "=" (arithmeticExpression | identifier | booleanExpression | ifExpression)
 
 command = "print:" (arithmeticExpression | identifier)
+                   
+ifExpression = "if" booleanExpression "then" 
+                   [ arithmeticExpression | booleanExpression | ifExpression ]
+               "else"
+                   [ arithmeticExpression | booleanExpression | ifExpression ]
 
 statement = assignment | command
 
