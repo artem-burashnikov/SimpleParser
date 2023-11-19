@@ -1,19 +1,24 @@
 module Parsers.AST
 
-type SourceExpr =
+type BooleanOperator =
+    | LessThanOrEqual
+    | LessThan
+    | NotEqual
+    | Equal
+    | GreaterThan
+    | GreaterThanOrEqual
+
+and BooleanExpression =
+    | Expression of BooleanOperator * SourceExpr * SourceExpr
+    | True
+    | False
+
+and SourceExpr =
     | Number of int
     | Multiply of list<SourceExpr>
     | Add of list<SourceExpr>
-    | BooleanExpression of Comparison
+    | IfThenElse of condition: BooleanExpression * trueBranch: SourceExpr * elseBranch: SourceExpr
     | Var of string
-
-and Comparison =
-    | LessThanOrEqual of SourceExpr * SourceExpr
-    | LessThan of SourceExpr * SourceExpr
-    | NotEqual of SourceExpr * SourceExpr
-    | Equal of SourceExpr * SourceExpr
-    | GreaterThan of SourceExpr * SourceExpr
-    | GreaterThanOrEqual of SourceExpr * SourceExpr
 
 type SourceAst =
     | VarAssignment of string * SourceExpr

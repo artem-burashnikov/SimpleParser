@@ -13,6 +13,27 @@ let rec eval (context: Dictionary<_, _>) expr =
             context[varName]
         else
             failwithf $"Var with name {varName} is not declared."
+    | IfThenElse(condition, trueBranch, elseBranch) ->
+        let evaluatedCondition =
+            match condition with
+            | True -> true
+            | False -> false
+            | Expression(operator, lhs, rhs) ->
+                let evaluatedLhs = eval context lhs
+                let evaluatedRhs = eval context rhs
+
+                match operator with
+                | LessThanOrEqual -> evaluatedLhs <= evaluatedRhs
+                | LessThan -> evaluatedLhs < evaluatedRhs
+                | NotEqual -> evaluatedLhs <> evaluatedRhs
+                | Equal -> evaluatedLhs = evaluatedRhs
+                | GreaterThan -> evaluatedLhs >= evaluatedRhs
+                | GreaterThanOrEqual -> evaluatedLhs >= evaluatedRhs
+
+        if evaluatedCondition then
+            (eval context trueBranch)
+        else
+            (eval context elseBranch)
 
 let rec evalStmt context stmt =
     match stmt with
