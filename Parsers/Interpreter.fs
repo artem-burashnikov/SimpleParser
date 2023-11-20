@@ -13,12 +13,12 @@ let rec eval (context: Dictionary<_, _>) expr =
             context[varName]
         else
             failwithf $"Var with name {varName} is not declared."
-    | IfThenElse(condition: BooleanExpression, trueBranch, elseBranch) ->
+    | IfThenElse(condition: Conditional, trueBranch, elseBranch) ->
         let evaluatedCondition =
             match condition with
             | True -> true
             | False -> false
-            | Expression(operator, lhs, rhs) ->
+            | BooleanExpression(operator, lhs, rhs) ->
                 let computations =
                     [| async { return eval context lhs }; async { return eval context rhs } |]
 
