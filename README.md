@@ -24,6 +24,12 @@ SPBU 3rd semester homework assignment.
 
 Definition using [EBNF][grammar-notation] notation:
 
+`[x]` denotes one or more
+
+`{x}` denotes zero or more
+
+`(x)` denotes a capture group
+
 ```ignorelang
 digit = "0" | ... | "9"
 
@@ -47,10 +53,10 @@ relationalOperator = "=" | "<>" | "<=" | "<" | ">=" | ">"
 
 booleanExpression = booleanValue | (arithmeticExpression | identifier) relationalOperator (arithmeticExpression | identifier)
 
-ifExpression = "if" booleanExpression "then" 
-                   [ arithmeticExpression | booleanExpression | ifExpression ]
+ifExpression = "if" "(" booleanExpression ")" "then" 
+                   "(" [ arithmeticExpression | booleanExpression | ifExpression ] ")"
                "else"
-                   [ arithmeticExpression | booleanExpression | ifExpression ]                   
+                   "(" [ arithmeticExpression | booleanExpression | ifExpression ] ")"                
 
 command = "print:" (arithmeticExpression | identifier)
 

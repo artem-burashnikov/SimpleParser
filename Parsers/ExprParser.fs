@@ -18,11 +18,6 @@ let parseMultiply =
 
 let parseAdd = parseList parseMultiply (parseIgnore (parseChar '+')) |> fMap Add
 
-let parseAssignment =
-    parseSeq parseIdentifier (fun identifierName ->
-        parseSeq (parseIgnore (parseChar '=')) (fun _ ->
-            fMap (fun expr -> VarAssignment(identifierName, expr)) parseAdd))
-
 let parseKeyWordPrint = parseKeyWord "print"
 
 let parsePrint =
@@ -75,10 +70,19 @@ let rec parseIfThenElse input =
             parseSeq parseConditional (fun cond ->
                 parseSeq (parseIgnore (parseChar ')')) (fun _ ->
                     parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
-                        parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
-                            parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
-                                parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
-                                    parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))) input
+                        parseSeq (parseIgnore (parseChar '(')) (fun _ ->
+                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
+                                parseSeq (parseIgnore (parseChar ')')) (fun _ ->
+                                    parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
+                                        parseSeq (parseIgnore (parseChar '(')) (fun _ ->
+                                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
+                                                parseSeq (parseIgnore (parseChar ')')) (fun _ ->
+                                                    parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))))))) input
+
+let parseAssignment =
+    parseSeq parseIdentifier (fun identifierName ->
+        parseSeq (parseIgnore (parseChar '=')) (fun _ ->
+            fMap (fun expr -> VarAssignment(identifierName, expr)) (parseAlt parseIfThenElse parseAdd)))
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
