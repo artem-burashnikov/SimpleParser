@@ -70,17 +70,15 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseIfThenElse input =
-    parseSeq
-        (parseIgnore parseKeyWordIf)
-        (fun _ ->
-            parseSeq (parseIgnore (parseChar '(')) (fun _ ->
-                parseSeq parseConditional (fun cond ->
-                    parseSeq (parseIgnore (parseChar ')')) (fun _ ->
-                        parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
-                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
-                                parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
-                                    parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
-                                        parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))) input
+    parseSeq (parseIgnore parseKeyWordIf) (fun _ ->
+        parseSeq (parseIgnore (parseChar '(')) (fun _ ->
+            parseSeq parseConditional (fun cond ->
+                parseSeq (parseIgnore (parseChar ')')) (fun _ ->
+                    parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
+                        parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
+                            parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
+                                parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
+                                    parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))) input
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
