@@ -2,6 +2,7 @@ module Parsers.ExprParser
 
 open Parsers.Combinators
 open Parsers.AST
+open Parsers.Helper
 
 let parseIdentifier: Parser<string> =
     parseSome (satisfy (fun x -> List.contains x [ 'a' .. 'z' ]))
@@ -36,42 +37,48 @@ let parseBooleanFalse =
 
 let parseBooleanValue = parseAlt parseBooleanTrue parseBooleanFalse
 
-let parseLessThanOrEqual =
-    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> LessThanOrEqual) parseEpsilon)
+let mapper =
+    fun relationalOperator ->
+        parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
+        |> fMap (fun sourceExprList ->
+            if List.length sourceExprList = 2 then
+                printfn $"%A{sourceExprList}"
+                System.Console.ReadKey() |> ignore
+                Ok <| BooleanExpression(parseKeyWrdToRelationalOp relationalOperator, sourceExprList[0], sourceExprList[1])
+            else
+                Error "Incorrect operator")
 
-let parseLessThan =
-    parseSeq (parseIgnore (parseChar '<')) (fun _ -> fMap (fun _ -> LessThan) parseEpsilon)
-
-let parseNotEqual =
-    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
-
-let parseEqual =
-    parseSeq (parseIgnore (parseChar '=')) (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
-
-let parseGreaterThan =
-    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> GreaterThan) parseEpsilon)
-
-let parseGreaterThanOrEqual =
-    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
-
-let parseBooleanOperator =
-    parseAlt
-        parseGreaterThanOrEqual
-        (parseAlt
-            parseGreaterThan
-            (parseAlt
-                parseEqual
-                    (parseAlt
-                        parseNotEqual
-                            (parseAlt
-                                parseLessThan
-                                parseLessThanOrEqual))))
+let parseConditionalExpression =
+    fun input ->
+        // Find which comparison operator fully matches
+        let operator =
+            Array.find (fun operatorKeyWord ->
+            match mapper operatorKeyWord input with
+            | Some(_, result) when (Result.isOk result) -> true
+            | _ -> false
+            ) relationalOperators
+        
+        // At least some operator should have fully matched at this point
+        (mapper operator |> fMap (fun (Ok result) -> result)) input
+            
+let parseConditional =
+    parseAlt parseBooleanValue parseConditionalExpression
 
 let parseKeyWordIf = parseKeyWord "if"
 
 let parseKeyWordThen = parseKeyWord "then"
 
 let parseKeyWordElse = parseKeyWord "else"
+
+let rec parseIfThenElse input =
+    parseSeq (parseIgnore parseKeyWordIf) (fun _ ->
+        parseSeq parseConditionalExpression (fun cond ->
+            parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
+                parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
+                    parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
+                        parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
+                            parseSeq parseEpsilon (fun _ ->
+                                fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))) input
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
