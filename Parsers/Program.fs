@@ -1,16 +1,12 @@
-﻿open Parsers.Combinators
+﻿open Parsers.AST
+open Parsers.Combinators
 open Parsers.Interpreter
 
-let res =
-    run
-        Parsers.ExprParser.parseProgram
-        "x=2*10+2*3*4+20
-var=x+x
-print:var*2
-print=var*x
-print:print"
+let res = run Parsers.ExprParser.parseProgram "x=if(10=3)then(105)else(3)
+print:x"
 
 match res with
 | None -> printfn "Incorrect input"
 | Some(_, ast) ->
+    printfn $"%A{res}"
     evalProgram ast
