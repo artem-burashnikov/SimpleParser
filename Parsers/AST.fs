@@ -1,21 +1,43 @@
 module Parsers.AST
 
+open Microsoft.FSharp.Reflection
+
 type RelationalOperator =
     | LessThanOrEqual
-    | LessThan
     | NotEqual
+    | GreaterThanOrEqual
     | Equal
     | GreaterThan
-    | GreaterThanOrEqual
+    | LessThan
 
     override this.ToString() =
         match this with
         | LessThanOrEqual -> "<="
-        | LessThan -> "<"
         | NotEqual -> "<>"
+        | GreaterThanOrEqual -> ">="
         | Equal -> "="
         | GreaterThan -> ">"
-        | GreaterThanOrEqual -> ">="
+        | LessThan -> "<"
+
+    /// <summary>
+    /// Gets an array of all available relational operator's keywords.
+    /// </summary>
+    static member All() =
+        let cases = FSharpType.GetUnionCases(typeof<RelationalOperator>)
+
+        [| for case in cases do
+               let operator = FSharpValue.MakeUnion(case, [||]) :?> RelationalOperator
+               yield operator.ToString() |]
+
+    static member FromString str =
+        match str with
+        | "<=" -> LessThanOrEqual
+        | "<" -> LessThan
+        | "<>" -> NotEqual
+        | "=" -> Equal
+        | ">" -> GreaterThan
+        | ">=" -> GreaterThanOrEqual
+        | _ -> failwith "Not a boolean operator"
 
 and Conditional =
     | True

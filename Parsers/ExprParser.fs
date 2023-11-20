@@ -2,7 +2,6 @@ module Parsers.ExprParser
 
 open Parsers.Combinators
 open Parsers.AST
-open Parsers.Helper
 
 let parseIdentifier: Parser<string> =
     parseSome (satisfy (fun x -> List.contains x [ 'a' .. 'z' ]))
@@ -37,30 +36,27 @@ let parseBooleanFalse =
 
 let parseBooleanValue = parseAlt parseBooleanTrue parseBooleanFalse
 
-let mapper =
-    fun relationalOperator ->
+let parseConditionalExpression =
+    let mapper relationalOperator =
         parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
         |> fMap (fun sourceExprList ->
             if List.length sourceExprList = 2 then
-                Ok
-                <| BooleanExpression(
-                    parseKeyWrdToRelationalOp relationalOperator,
-                    sourceExprList[0],
-                    sourceExprList[1]
-                )
+                let lhs :: rhs :: _ = sourceExprList
+                
+                BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs) |> Ok
             else
-                Error "Incorrect operator")
+                "Incorrect operator" |> Error)
 
-let parseConditionalExpression =
     fun input ->
-        // Find which comparison operator fully matches
+        // We can determine which comparison operator fully matches
+        // by checking if any of the operator keywords are left after parsing.
         let operator =
             Array.find
                 (fun operatorKeyWord ->
                     match mapper operatorKeyWord input with
                     | Some(_, result) when (Result.isOk result) -> true
                     | _ -> false)
-                relationalOperators
+                (RelationalOperator.All())
 
         // At least some operator should have fully matched at this point
         (mapper operator |> fMap (fun (Ok result) -> result)) input
