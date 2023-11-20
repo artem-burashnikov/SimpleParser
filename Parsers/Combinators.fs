@@ -12,11 +12,11 @@ let parseChar ch : Parser<char> = satisfy (fun x -> ch = x)
 
 let parseEpsilon: Parser<unit> = fun input -> Some(input, ())
 
-let parseSeq (parser1: Parser<'A>) (parser2: 'A -> Parser<'B>) : Parser<'B> =
+let parseSeq (parser1: Parser<'A>) (continuation: 'A -> Parser<'B>) : Parser<'B> =
     fun input ->
         match parser1 input with
         | None -> None
-        | Some(charList, result) -> parser2 result charList
+        | Some(charList, result) -> continuation result charList
 
 let parseAlt (parser1: Parser<'A>) (parser2: Parser<'A>) : Parser<'A> =
     fun input ->
