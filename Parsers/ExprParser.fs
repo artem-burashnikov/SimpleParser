@@ -42,9 +42,12 @@ let mapper =
         parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
         |> fMap (fun sourceExprList ->
             if List.length sourceExprList = 2 then
-                printfn $"%A{sourceExprList}"
-                System.Console.ReadKey() |> ignore
-                Ok <| BooleanExpression(parseKeyWrdToRelationalOp relationalOperator, sourceExprList[0], sourceExprList[1])
+                Ok
+                <| BooleanExpression(
+                    parseKeyWrdToRelationalOp relationalOperator,
+                    sourceExprList[0],
+                    sourceExprList[1]
+                )
             else
                 Error "Incorrect operator")
 
@@ -52,17 +55,17 @@ let parseConditionalExpression =
     fun input ->
         // Find which comparison operator fully matches
         let operator =
-            Array.find (fun operatorKeyWord ->
-            match mapper operatorKeyWord input with
-            | Some(_, result) when (Result.isOk result) -> true
-            | _ -> false
-            ) relationalOperators
-        
+            Array.find
+                (fun operatorKeyWord ->
+                    match mapper operatorKeyWord input with
+                    | Some(_, result) when (Result.isOk result) -> true
+                    | _ -> false)
+                relationalOperators
+
         // At least some operator should have fully matched at this point
         (mapper operator |> fMap (fun (Ok result) -> result)) input
-            
-let parseConditional =
-    parseAlt parseBooleanValue parseConditionalExpression
+
+let parseConditional = parseAlt parseBooleanValue parseConditionalExpression
 
 let parseKeyWordIf = parseKeyWord "if"
 
@@ -71,14 +74,17 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseIfThenElse input =
-    parseSeq (parseIgnore parseKeyWordIf) (fun _ ->
-        parseSeq parseConditionalExpression (fun cond ->
-            parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
-                parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
-                    parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
-                        parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
-                            parseSeq parseEpsilon (fun _ ->
-                                fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))) input
+    parseSeq
+        (parseIgnore parseKeyWordIf)
+        (fun _ ->
+            parseSeq (parseIgnore (parseChar '(')) (fun _ ->
+                parseSeq parseConditional (fun cond ->
+                    parseSeq (parseIgnore (parseChar ')')) (fun _ ->
+                        parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
+                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
+                                parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
+                                    parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
+                                        parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))) input
 
 let parseProgram =
     parseList (parseAlt parsePrint parseAssignment) (parseIgnore (parseChar '\n'))
