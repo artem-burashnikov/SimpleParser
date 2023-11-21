@@ -43,7 +43,7 @@ module Main =
 
             match result with
             | None ->
-                eprintfn "incorrect file path"
+                eprintfn "incorrect code input"
                 exit 1
             | Some(_, ast) -> evalProgram ast
 
