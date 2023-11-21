@@ -71,13 +71,13 @@ let rec parseIfThenElse input =
                 parseSeq (parseIgnore (parseChar ')')) (fun _ ->
                     parseSeq (parseIgnore parseKeyWordThen) (fun _ ->
                         parseSeq (parseIgnore (parseChar '(')) (fun _ ->
-                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun trueBranch ->
+                            parseSeq (parseAlt parseIfThenElse parseAdd) (fun trueBranch ->
                                 parseSeq (parseIgnore (parseChar ')')) (fun _ ->
                                     parseSeq (parseIgnore parseKeyWordElse) (fun _ ->
                                         parseSeq (parseIgnore (parseChar '(')) (fun _ ->
-                                            parseSeq (parseAlt parseAdd parseIfThenElse) (fun elseBranch ->
+                                            parseSeq (parseAlt parseIfThenElse parseAdd) (fun elseBranch ->
                                                 parseSeq (parseIgnore (parseChar ')')) (fun _ ->
-                                                    parseSeq parseEpsilon (fun _ -> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon))))))))))))) input
+                                                    fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)) parseEpsilon)))))))))))) input
 
 let parseAssignment =
     parseSeq parseIdentifier (fun identifierName ->
