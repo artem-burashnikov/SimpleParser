@@ -59,14 +59,11 @@ and parseConditionalExpression input =
     let mapper relationalOperator =
         parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
         |> fMap (fun sourceExprList ->
-            if List.length sourceExprList = 2 then
-                let lhs :: rhs :: _ = sourceExprList
-
-                BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs)
-                |> Ok
-            else
-                "Incorrect operator"
-                |> Error
+            match sourceExprList with
+            | [ lhs; rhs ] ->
+                Ok
+                <| BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs)
+            | _ -> Error $"Failed to parse comparison operator: {relationalOperator}"
         )
 
     let operator =
@@ -79,7 +76,11 @@ and parseConditionalExpression input =
             (RelationalOperator.All())
 
     (mapper operator
-     |> fMap (fun (Ok result) -> result))
+     |> fMap (
+         function
+         | Ok result -> result
+         | Error message -> failwith message
+     ))
         input
 
 and parseConditional input =
