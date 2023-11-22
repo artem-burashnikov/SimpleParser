@@ -1,0 +1,6 @@
+namespace SimpleParser
+
+module Main =
+
+    [<EntryPoint>]
+    let main _ = 0
