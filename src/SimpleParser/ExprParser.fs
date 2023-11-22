@@ -18,13 +18,7 @@ let parseIdentifier: Parser<string> =
     )
 
 let parseNumber =
-    parseSeq
-        (satisfy (fun x -> List.contains x [ '1' .. '9' ]))
-        (fun res ->
-            fMap
-                (fun tl -> res :: tl)
-                (parseMany (satisfy (fun x -> List.contains x [ '0' .. '9' ])))
-        )
+    parseSeq (satisfy (fun x -> List.contains x [ '1' .. '9' ])) (fun res -> fMap (fun tl -> res :: tl) (parseMany (satisfy (fun x -> List.contains x [ '0' .. '9' ]))))
     |> fMap (fun res ->
         res
         |> Array.ofList
@@ -48,9 +42,7 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
-    (parseList
-        (parseAlt parseIfThenElse (parseAlt parseNumber (fMap Var parseIdentifier)))
-        (parseIgnore (parseChar '*'))
+    (parseList (parseAlt parseIfThenElse (parseAlt parseNumber (fMap Var parseIdentifier))) (parseIgnore (parseChar '*'))
      |> fMap Multiply)
         input
 
@@ -115,37 +107,19 @@ and parseIfThenElse input =
                                                                 (parseIgnore (parseChar ')'))
                                                                 (fun _ ->
                                                                     parseSeq
-                                                                        (parseIgnore
-                                                                            parseKeyWordElse)
+                                                                        (parseIgnore parseKeyWordElse)
                                                                         (fun _ ->
                                                                             parseSeq
-                                                                                (parseIgnore (
-                                                                                    parseChar
-                                                                                        '('
-                                                                                ))
+                                                                                (parseIgnore (parseChar '('))
                                                                                 (fun _ ->
                                                                                     parseSeq
-                                                                                        (parseAlt
-                                                                                            parseIfThenElse
-                                                                                            parseAdd)
-                                                                                        (fun
-                                                                                            elseBranch ->
+                                                                                        (parseAlt parseIfThenElse parseAdd)
+                                                                                        (fun elseBranch ->
                                                                                             parseSeq
-                                                                                                (parseIgnore (
-                                                                                                    parseChar
-                                                                                                        ')'
-                                                                                                ))
-                                                                                                (fun
-                                                                                                    _ ->
+                                                                                                (parseIgnore (parseChar ')'))
+                                                                                                (fun _ ->
                                                                                                     parseEpsilon
-                                                                                                    |> fMap (fun
-                                                                                                                 _ ->
-                                                                                                        IfThenElse(
-                                                                                                            cond,
-                                                                                                            trueBranch,
-                                                                                                            elseBranch
-                                                                                                        )
-                                                                                                    )
+                                                                                                    |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))
                                                                                                 )
                                                                                         )
                                                                                 )
