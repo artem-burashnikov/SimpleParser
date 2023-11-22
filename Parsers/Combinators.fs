@@ -38,9 +38,10 @@ let rec parseMany (parser: Parser<'A>) : Parser<List<'A>> =
 let parseSome (parser: Parser<'A>) : Parser<List<'A>> =
     parseSeq parser (fun result -> fMap (fun tl -> result :: tl) (parseMany parser))
 
-let parseList (parseElement: Parser<'Element>) (parseSeparator: Parser<unit>) =
-    parseSeq parseElement (fun result ->
-        fMap (fun tl -> result :: tl) (parseMany (parseSeq parseSeparator (fun _ -> parseElement))))
+let parseList (elementParser: Parser<'A>) (parseSeparator: Parser<unit>) =
+    parseSeq elementParser (fun result ->
+        (parseMany (parseSeq parseSeparator (fun _ -> elementParser)))
+        |> fMap (fun tl -> result :: tl))
 
 let parseIgnore parser = fMap ignore parser
 
