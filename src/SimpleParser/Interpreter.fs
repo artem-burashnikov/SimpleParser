@@ -2,6 +2,7 @@ module SimpleParser.Interpreter
 
 open System.Collections.Generic
 open SimpleParser.AST
+open SimpleParser.Analyzer
 
 let rec eval (context: Dictionary<_, _>) expr =
     match expr with
@@ -83,5 +84,5 @@ let evalProgram (statements: list<SourceAst>) =
             context
         )
         context
-        statements
+        (optimize context statements)
     |> ignore
