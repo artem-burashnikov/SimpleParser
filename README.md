@@ -1,7 +1,7 @@
 [![MIT License][license-shield]][license-url]
 
 # SimpleParser
-    
+
 SPBU 3rd semester homework assignment.
 
 <ol>
