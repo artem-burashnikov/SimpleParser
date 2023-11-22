@@ -42,13 +42,17 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
-    (parseList (parseAlt parseIfThenElse (parseAlt parseNumber (fMap Var parseIdentifier))) (parseIgnore (parseChar '*'))
-     |> fMap Multiply)
+    parseAlt
+        parseIfThenElse
+        (parseList (parseAlt parseIfThenElse (parseAlt parseNumber (fMap Var parseIdentifier))) (parseIgnore (parseChar '*'))
+         |> fMap Multiply)
         input
 
 and parseAdd input =
-    (parseList parseMultiply (parseIgnore (parseChar '+'))
-     |> fMap Add)
+    parseAlt
+        parseIfThenElse
+        (parseList parseMultiply (parseIgnore (parseChar '+'))
+         |> fMap Add)
         input
 
 and parseConditionalExpression input =
@@ -101,7 +105,7 @@ and parseIfThenElse input =
                                                 (parseIgnore (parseChar '('))
                                                 (fun _ ->
                                                     parseSeq
-                                                        (parseAlt parseIfThenElse parseAdd)
+                                                        parseAdd
                                                         (fun trueBranch ->
                                                             parseSeq
                                                                 (parseIgnore (parseChar ')'))
@@ -113,7 +117,7 @@ and parseIfThenElse input =
                                                                                 (parseIgnore (parseChar '('))
                                                                                 (fun _ ->
                                                                                     parseSeq
-                                                                                        (parseAlt parseIfThenElse parseAdd)
+                                                                                        parseAdd
                                                                                         (fun elseBranch ->
                                                                                             parseSeq
                                                                                                 (parseIgnore (parseChar ')'))
@@ -141,7 +145,7 @@ and parseAssignment input =
             parseSeq
                 (parseIgnore (parseChar '='))
                 (fun _ ->
-                    (parseAlt parseAdd (parseAlt parseMultiply parseIfThenElse))
+                    parseAdd
                     |> fMap (fun expr -> VarAssignment(identifierName, expr))
                 )
         )
