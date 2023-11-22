@@ -6,12 +6,12 @@ open SimpleParser.Combinators
 open SimpleParser.Interpreter
 
 type CliArguments =
-    | [<Unique; Mandatory; AltCommandLine("-i")>] TextFile of path: string
+    | [<Unique; Mandatory; MainCommand>] FilePath of path: string
 
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | TextFile _ -> "specify a path to the file"
+            | FilePath _ -> "specify a path to the file"
 
 module Main =
 
@@ -33,7 +33,7 @@ module Main =
             let results = parser.ParseCommandLine argv
 
             let filePath =
-                match results.TryGetResult(TextFile) with
+                match results.TryGetResult(FilePath) with
                 | Some path when
                     (File.Exists path)
                     && (Path.GetExtension path = ".txt")
