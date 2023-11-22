@@ -41,9 +41,9 @@ letter = "a" | ... | "z" | "A" | ... | "Z"
 
 identifier = letter { letter | digit }
 
-factor = identifier | number | factor "*" factor
+factor = identifier | number | ifExpression | (factor "*" factor)
 
-add = (factor | add) "+" (factor | add)
+add = factor | (add "+" add)
 
 arithmeticExpression = factor | add
 
@@ -60,7 +60,7 @@ ifExpression = "if" "(" booleanExpression ")" "then"
 
 command = "print:" (arithmeticExpression | identifier)
 
-assignment = identifier "=" (arithmeticExpression | identifier | ifExpression)
+assignment = identifier "=" (booleanValue | arithmeticExpression | identifier | ifExpression)
 
 statement = assignment | command
 
