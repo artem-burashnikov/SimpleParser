@@ -2,3 +2,4 @@
 AssemblyInfo.fs
 build.fs
 Changelog.fs
+tests/*

@@ -1,0 +1,1 @@
+result=if(false)then(x)else(2)
