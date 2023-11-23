@@ -13,6 +13,7 @@ SPBU 3rd semester homework assignment.
         <ul>
             <li><a href="#prerequisites">Prerequisites</a></li>
             <li><a href="#installation">Installation</a></li>
+            <li><a href="#usage">Usage</a></li>
         </ul>
     </li>
     <li>
@@ -75,11 +76,42 @@ To get a local copy up and running follow the steps below.
 
 ### Installation
 
-Clone the repo:
+1. Clone the repo:
 
-```sh
-git clone https://github.com/artem-burashnikov/SimpleParser.git
+    ```shell
+    git clone https://github.com/artem-burashnikov/SimpleParser.git
+    ```
+   
+2. Build the project:
+
+    ```shell
+    ./build.sh
+    ```
+
+### Usage
+
+CLI is available:
+
+```ignorelang
+USAGE: SimpleParser [--help] <path>
+
+FILEPATH:
+
+    <path>                Specify a path to the file 
+                          containing a program.
+
+OPTIONS:
+
+    --help                Display this list of options.
 ```
+Following a language definition, a simple program may look like this:
+```
+x=3
+y=2
+z=if(true)then(x*y+7)else(1)
+print:z
+```
+Outputs `13` to the console.
 
 ## License
 
