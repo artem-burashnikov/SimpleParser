@@ -1,6 +1,13 @@
 module SimpleParser.AST
 
+open System.Collections.Generic
 open Microsoft.FSharp.Reflection
+
+type VarType =
+    | Integer
+    | Boolean
+
+type Context<'a> = VarType option * Dictionary<string, 'a>
 
 type RelationalOperator =
     | LessThanOrEqual
@@ -41,16 +48,17 @@ type RelationalOperator =
         | ">=" -> GreaterThanOrEqual
         | _ -> failwith "Not a boolean operator"
 
-and Conditional =
+and BooleanValue =
     | True
     | False
     | BooleanExpression of RelationalOperator * SourceExpr * SourceExpr
 
 and SourceExpr =
     | Number of int
+    | BooleanExpr of BooleanValue
     | Multiply of list<SourceExpr>
     | Add of list<SourceExpr>
-    | IfThenElse of condition: Conditional * trueBranch: SourceExpr * elseBranch: SourceExpr
+    | IfThenElse of condition: BooleanValue * trueBranch: SourceExpr * elseBranch: SourceExpr
     | Var of string
 
 type SourceAst =
