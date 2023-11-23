@@ -31,11 +31,9 @@ Definition using [EBNF][grammar-notation] notation:
 `(x)` denotes a capture group
 
 ```ignorelang
-digit = "0" | ... | "9"
+digit = "1" | ... | "9"
 
-nonzeroDigit = "1" | ... | "9"
-
-number = digit | nonzeroDigit { digit }
+number = { digit }
 
 letter = "a" | ... | "z" | "A" | ... | "Z"
 
