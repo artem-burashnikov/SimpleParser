@@ -11,21 +11,12 @@ let isOk =
 
 let parseIdentifier: Parser<string> =
     parseSome (satisfy (fun x -> List.contains x [ 'a' .. 'z' ]))
-    |> fMap (fun res ->
-        res
-        |> Array.ofList
-        |> System.String
-    )
+    |> fMap (fun res -> res |> Array.ofList |> System.String)
 
 let parseNumber =
-    parseSeq (satisfy (fun x -> List.contains x [ '1' .. '9' ])) (fun res -> fMap (fun tl -> res :: tl) (parseMany (satisfy (fun x -> List.contains x [ '0' .. '9' ]))))
-    |> fMap (fun res ->
-        res
-        |> Array.ofList
-        |> System.String
-        |> int
-        |> Number
-    )
+    parseSeq (satisfy (fun ch -> List.contains ch [ '1' .. '9' ])) (fun parsedChar ->
+        (parseMany (satisfy (fun x -> List.contains x [ '0' .. '9' ]))) |> fMap (fun restOfInput -> parsedChar :: restOfInput))
+    |> fMap (fun charList -> charList |> Array.ofList |> System.String |> int |> Number)
 
 let parseBooleanTrue =
     parseSeq (parseIgnore (parseKeyWord "true")) (fun _ -> fMap (fun _ -> True) parseEpsilon)
@@ -47,105 +38,62 @@ let rec parseMultiply input =
 
     (parseList (parseAlt alt1 alt2) (parseIgnore (parseChar '*'))
      |> fMap Multiply)
-        input
+    <| input
 
 and parseAdd input =
     (parseList parseMultiply (parseIgnore (parseChar '+'))
      |> fMap Add)
-        input
+    <| input
 
 and parseConditionalExpression input =
     let mapper relationalOperator =
         parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
-        |> fMap (fun sourceExprList ->
-            match sourceExprList with
-            | [ lhs; rhs ] ->
-                Ok
-                <| BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs)
-            | _ -> Error $"Failed to parse comparison operator: {relationalOperator}"
-        )
+        |> fMap (
+            function
+            | [ lhs; rhs ] -> Ok (BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs))
+            | _ -> Error $"Failed to parse comparison operator: {relationalOperator}")
 
     let operator =
         Array.find
-            (fun operatorKeyWord ->
+            <| fun operatorKeyWord ->
                 match mapper operatorKeyWord input with
                 | Some(_, result) when isOk result -> true
                 | _ -> false
-            )
-            (RelationalOperator.All())
+            <| RelationalOperator.All()
 
-    (mapper operator
-     |> fMap (
-         function
+    mapper operator
+     |> fMap
+        (function
          | Ok result -> result
-         | Error message -> failwith message
-     ))
-        input
+         | Error message -> failwith message)
+    <| input
 
 and parseConditional input =
-    (parseAlt parseBooleanValue parseConditionalExpression) input
+    parseAlt parseBooleanValue parseConditionalExpression
+    <| input
 
 and parseIfThenElse input =
-    parseSeq
-        parseKeyWordIf
-        (fun _ ->
-            parseSeq
-                (parseChar '(')
-                (fun _ ->
-                    parseSeq
-                        parseConditional
-                        (fun cond ->
-                            parseSeq
-                                (parseChar ')')
-                                (fun _ ->
-                                    parseSeq
-                                        parseKeyWordThen
-                                        (fun _ ->
-                                            parseSeq
-                                                (parseChar '(')
-                                                (fun _ ->
-                                                    parseSeq
-                                                        parseAdd
-                                                        (fun trueBranch ->
-                                                            parseSeq
-                                                                (parseChar ')')
-                                                                (fun _ ->
-                                                                    parseSeq
-                                                                        parseKeyWordElse
-                                                                        (fun _ ->
-                                                                            parseSeq
-                                                                                (parseChar '(')
-                                                                                (fun _ ->
-                                                                                    parseSeq
-                                                                                        parseAdd
-                                                                                        (fun elseBranch ->
-                                                                                            (parseChar ')')
-                                                                                            |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))
-                                                                                        )
-                                                                                )
-                                                                        )
-                                                                )
-                                                        )
-                                                )
-                                        )
-                                )
-                        )
-                )
-        )
-        input
+    parseSeq parseKeyWordIf (fun _ ->
+        parseSeq (parseChar '(') (fun _ ->
+            parseSeq parseConditional (fun cond ->
+                parseSeq (parseChar ')') (fun _ ->
+                    parseSeq parseKeyWordThen (fun _ ->
+                        parseSeq (parseChar '(') (fun _ ->
+                            parseSeq parseAdd (fun trueBranch ->
+                                parseSeq (parseChar ')') (fun _ ->
+                                    parseSeq parseKeyWordElse (fun _ ->
+                                        parseSeq (parseChar '(') (fun _ ->
+                                            parseSeq parseAdd (fun elseBranch ->
+                                                (parseChar ')')
+                                                |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)))))))))))))
+    <| input
 
 and parseAssignment input =
-    parseSeq
-        parseIdentifier
-        (fun identifierName ->
-            parseSeq
-                (parseIgnore (parseChar '='))
-                (fun _ ->
-                    parseAdd
-                    |> fMap (fun expr -> VarAssignment(identifierName, expr))
-                )
-        )
-        input
+    parseSeq parseIdentifier (fun identifierName ->
+        parseSeq (parseIgnore (parseChar '=')) (fun _ ->
+            parseAdd
+            |> fMap (fun expr -> VarAssignment(identifierName, expr))))
+    <| input
 
 let parseKeyWordPrint = parseKeyWord "print"
 
