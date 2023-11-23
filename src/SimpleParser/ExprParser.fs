@@ -42,17 +42,16 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
-    parseAlt
-        parseIfThenElse
-        (parseList (parseAlt parseIfThenElse (parseAlt parseNumber (fMap Var parseIdentifier))) (parseIgnore (parseChar '*'))
-         |> fMap Multiply)
+    let alt1 = parseIfThenElse
+    let alt2 = parseAlt parseNumber (fMap Var parseIdentifier)
+
+    (parseList (parseAlt alt1 alt2) (parseIgnore (parseChar '*'))
+     |> fMap Multiply)
         input
 
 and parseAdd input =
-    parseAlt
-        parseIfThenElse
-        (parseList parseMultiply (parseIgnore (parseChar '+'))
-         |> fMap Add)
+    (parseList parseMultiply (parseIgnore (parseChar '+'))
+     |> fMap Add)
         input
 
 and parseConditionalExpression input =
@@ -88,44 +87,40 @@ and parseConditional input =
 
 and parseIfThenElse input =
     parseSeq
-        (parseIgnore parseKeyWordIf)
+        parseKeyWordIf
         (fun _ ->
             parseSeq
-                (parseIgnore (parseChar '('))
+                (parseChar '(')
                 (fun _ ->
                     parseSeq
                         parseConditional
                         (fun cond ->
                             parseSeq
-                                (parseIgnore (parseChar ')'))
+                                (parseChar ')')
                                 (fun _ ->
                                     parseSeq
-                                        (parseIgnore parseKeyWordThen)
+                                        parseKeyWordThen
                                         (fun _ ->
                                             parseSeq
-                                                (parseIgnore (parseChar '('))
+                                                (parseChar '(')
                                                 (fun _ ->
                                                     parseSeq
                                                         parseAdd
                                                         (fun trueBranch ->
                                                             parseSeq
-                                                                (parseIgnore (parseChar ')'))
+                                                                (parseChar ')')
                                                                 (fun _ ->
                                                                     parseSeq
-                                                                        (parseIgnore parseKeyWordElse)
+                                                                        parseKeyWordElse
                                                                         (fun _ ->
                                                                             parseSeq
-                                                                                (parseIgnore (parseChar '('))
+                                                                                (parseChar '(')
                                                                                 (fun _ ->
                                                                                     parseSeq
                                                                                         parseAdd
                                                                                         (fun elseBranch ->
-                                                                                            parseSeq
-                                                                                                (parseIgnore (parseChar ')'))
-                                                                                                (fun _ ->
-                                                                                                    parseEpsilon
-                                                                                                    |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))
-                                                                                                )
+                                                                                            (parseChar ')')
+                                                                                            |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))
                                                                                         )
                                                                                 )
                                                                         )
