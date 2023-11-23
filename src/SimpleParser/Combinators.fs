@@ -32,67 +32,38 @@ let fMap (fnc: 'R1 -> 'R2) (parser: Parser<'R1>) : Parser<'R2> =
 
 let rec parseMany (parser: Parser<'A>) : Parser<List<'A>> =
     parseAlt
-        (parseSeq
-            parser
-            (fun result ->
-                fMap
-                    (fun tl ->
-                        result
-                        :: tl
-                    )
-                    (parseMany parser)
-            ))
+        (parseSeq parser (fun result ->
+            (parseMany parser)
+            |> fMap (fun tl -> result :: tl)))
         (fMap (fun _ -> []) parseEpsilon)
 
 let parseSome (parser: Parser<'A>) : Parser<List<'A>> =
-    parseSeq
-        parser
-        (fun result ->
-            fMap
-                (fun tl ->
-                    result
-                    :: tl
-                )
-                (parseMany parser)
-        )
+    parseSeq parser (fun result ->
+        (parseMany parser)
+        |> fMap (fun tl -> result :: tl))
 
 let parseList (elementParser: Parser<'A>) (parseSeparator: Parser<unit>) =
-    parseSeq
-        elementParser
-        (fun result ->
-            (parseMany (parseSeq parseSeparator (fun _ -> elementParser)))
-            |> fMap (fun tl ->
-                result
-                :: tl
-            )
-        )
+    parseSeq elementParser (fun result ->
+        (parseMany (parseSeq parseSeparator (fun _ -> elementParser)))
+        |> fMap (fun tl -> result :: tl)
+    )
 
 let parseIgnore parser = fMap ignore parser
 
 let parseKeyWord (kw: string) : Parser<string> =
     let chars = kw.ToCharArray()
 
-    Array.fold
-        (fun parser currChar ->
-            parseSeq
-                parser
-                (fun result ->
-                    fMap
-                        (fun char ->
-                            char
-                            :: result
-                        )
-                        (parseChar currChar)
-                )
-        )
-        (fMap (fun _ -> []) parseEpsilon)
-        chars
-    |> fMap (fun charList ->
-        charList
-        |> List.rev
-        |> Array.ofList
-        |> System.String
-    )
+    let folder =
+        fun stateParser currChar ->
+            parseSeq stateParser (fun result ->
+                (parseChar currChar)
+                |> fMap (fun char -> char :: result)
+            )
+    let stateParser = (fMap (fun _ -> []) parseEpsilon)
+    let array = chars
+
+    Array.fold folder stateParser array
+    |> fMap (fun charList -> charList |> List.rev |> Array.ofList |> System.String)
 
 let run =
     fun (parser: Parser<'R>) (input: string) ->
