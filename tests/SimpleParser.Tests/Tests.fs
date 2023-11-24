@@ -28,9 +28,7 @@ module ManualTests =
         let programCode =
             String.concat "\n" (File.ReadAllLines file)
 
-        let result = run parseProgram programCode
-
-        match result with
+        match run parseProgram programCode with
         | None -> failtest "incorrect code input"
         | Some(_, ast) -> ast
 
@@ -43,8 +41,7 @@ module ManualTests =
                 let actualResult = makeAST correctInputFiles["identifier"]
 
                 let expectedResult = [
-                    VarAssignment ("identifier", Add [Multiply [Number 42]])
-                ]
+                    VarAssignment ("identifier", Add [Multiply [Number 42]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse assignment"
 
@@ -56,8 +53,7 @@ module ManualTests =
                     VarAssignment ("a", Add [Multiply [Number 5]])
                     VarAssignment ("b", Add [Multiply [Number 7]])
                     VarAssignment ("c", Add [Multiply [Var "a"]; Multiply [Var "b"]])
-                    Print (Add [Multiply [Var "b"]; Multiply [Var "a"]])
-                ]
+                    Print         (     Add [Multiply [Var "b"]; Multiply [Var "a"]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse addition"
 
@@ -69,8 +65,7 @@ module ManualTests =
                     VarAssignment ("x", Add [Multiply [Number 8]])
                     VarAssignment ("y", Add [Multiply [Number 3]])
                     VarAssignment ("z", Add [Multiply [Var "x"; Var "y"]])
-                    VarAssignment ("w", Add [Multiply [Var "y"; Var "x"]])
-                ]
+                    VarAssignment ("w", Add [Multiply [Var "y"; Var "x"]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse multiplication"
 
@@ -83,8 +78,7 @@ module ManualTests =
                     VarAssignment ("b", Add [Multiply [Number 5]])
                     VarAssignment ("c", Add [Multiply [Number 2]])
                     VarAssignment ("z", Add [Multiply [Var "a"]; Multiply [Var "b"; Var "c"]])
-                    VarAssignment ("w", Add [Multiply [Var "c"; Var "b"]; Multiply [Var "a"]])
-                ]
+                    VarAssignment ("w", Add [Multiply [Var "c"; Var "b"]; Multiply [Var "a"]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse arithmetic"
 
@@ -96,18 +90,20 @@ module ManualTests =
                     VarAssignment ("y", Add [Multiply [Number 5]])
                     VarAssignment ("x", Add [Multiply [Number 10]])
                     VarAssignment ("z", Add [
-                           Multiply [Var "x"; Var "y"]
-                           Multiply [IfThenElse
-                                         (BooleanExpression (GreaterThan, Add [Multiply [Var "x"]], Add [Multiply [Number 10]]),
-                                          Add [Multiply [Number 1]],
-                                          Add [Multiply [Number 2]])]
-                           Multiply [Var "x"
-                                     IfThenElse (BooleanExpression (LessThan, Add [Multiply [Var "y"]],Add [Multiply [Number 20]]),
-                                                 Add [Multiply [Number 1]],
-                                                 Add [Multiply [Number 2]])
-                                     Var "y"]
-                    ])
-                ]
+                                             Multiply [Var "x"; Var "y"]
+                                             Multiply [IfThenElse (BooleanExpression (GreaterThan,
+                                                                                      Add [Multiply [Var "x"]],
+                                                                                      Add [Multiply [Number 10]]),
+                                                                   Add [Multiply [Number 1]],
+                                                                   Add [Multiply [Number 2]])]
+                                             Multiply [
+                                                       Var "x"
+                                                       IfThenElse (BooleanExpression (LessThan,
+                                                                                      Add [Multiply [Var "y"]],
+                                                                                      Add [Multiply [Number 20]]),
+                                                                   Add [Multiply [Number 1]],
+                                                                   Add [Multiply [Number 2]])
+                                                       Var "y"]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse arithmetic with if"
 
@@ -116,12 +112,9 @@ module ManualTests =
                 let actualResult = makeAST correctInputFiles["trueIF"]
 
                 let expectedResult = [
-                    VarAssignment ("result", Add [ Multiply [
-                        IfThenElse
-                            (True, Add [Multiply [Number 1]],
-                             Add [Multiply [Number 2]])]]
-                    )
-                ]
+                    VarAssignment ("result", Add [Multiply [IfThenElse (True,
+                                                                        Add [Multiply [Number 1]],
+                                                                        Add [Multiply [Number 2]])]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse always true if"
 
@@ -130,12 +123,9 @@ module ManualTests =
                 let actualResult = makeAST correctInputFiles["falseIF"]
 
                 let expectedResult = [
-                    VarAssignment ("result", Add [ Multiply [
-                        IfThenElse
-                            (False, Add [Multiply [Var "x"]],
-                             Add [Multiply [Number 2]])]]
-                    )
-                ]
+                    VarAssignment ("result", Add [Multiply [IfThenElse (False,
+                                                                         Add [Multiply [Var "x"]],
+                                                                         Add [Multiply [Number 2]])]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse always false if"
 
@@ -146,24 +136,16 @@ module ManualTests =
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 100]])
                     VarAssignment ("y", Add [Multiply [Number 1]])
-                    VarAssignment ( "r", Add [
-                        Multiply [ IfThenElse (
-                                    BooleanExpression (GreaterThan,
-                                        Add [Multiply [Var "x"]],
-                                        Add [Multiply [Var "y"]]
-                                        ),
-                                    Add [ Multiply [ IfThenElse (
-                                              BooleanExpression (LessThan,
-                                              Add [Multiply [Var "x"]],
-                                              Add [Multiply [Var "y"]]
-                                                ),
-                                                Add [Multiply [Number 10]; Multiply [Var "r"]],
-                                                Add [Multiply [Number 2; Number 2]]
-                                    )]],
-                                    Add [Multiply [Number 1]]
-                        )]
-                    ])
-                ]
+                    VarAssignment ("r", Add [Multiply
+                                                     [IfThenElse (BooleanExpression (GreaterThan,
+                                                                                     Add [Multiply [Var "x"]],
+                                                                                     Add [Multiply [Var "y"]]),
+                                                                  Add [Multiply [IfThenElse (BooleanExpression (LessThan,
+                                                                                                                 Add [Multiply [Var "x"]],
+                                                                                                                 Add [Multiply [Var "y"]]),
+                                                                                              Add [Multiply [Number 10]; Multiply [Var "r"]],
+                                                                                              Add [Multiply [Number 2; Number 2]])]],
+                                                                  Add [Multiply [Number 1]])]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse nested ifs"
         ]
