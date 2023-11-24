@@ -3,3 +3,5 @@ AssemblyInfo.fs
 build.fs
 Changelog.fs
 tests/*
+src/SimpleParser/Combinators.fs
+src/SimpleParser/ExprParser.fs
