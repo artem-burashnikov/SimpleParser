@@ -34,7 +34,7 @@ let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
     let alt1 = parseIfThenElse
-    let alt2 = parseAlt parseNumber (fMap Var parseIdentifier)
+    let alt2 = parseAlt parseNumber (fMap (fun varName -> Var(varName, Integer) )parseIdentifier)
 
     (parseList (parseAlt alt1 alt2) (parseIgnore (parseChar '*'))
      |> fMap Multiply)

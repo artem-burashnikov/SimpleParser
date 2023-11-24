@@ -4,7 +4,7 @@ open System.Collections.Generic
 open SimpleParser.AST
 open SimpleParser.Analyzer
 
-let rec eval (context: Dictionary<_, _>) expr =
+let rec eval (context: Context<_> as (_, ctx)) expr =
     match expr with
     | Number num -> num
     | Multiply lst ->
@@ -15,12 +15,12 @@ let rec eval (context: Dictionary<_, _>) expr =
         lst
         |> List.map (eval context)
         |> List.reduce (+)
-    | Var varName ->
-        if context.ContainsKey varName then
-            context[varName]
+    | Var(varName, _) ->
+        if ctx.ContainsKey varName then
+            ctx[varName]
         else
             failwithf $"Var with name {varName} is not declared."
-    | IfThenElse(condition: Conditional, trueBranch, elseBranch) ->
+    | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
         let evaluatedCondition =
             match condition with
             | True -> true
@@ -58,31 +58,40 @@ let rec eval (context: Dictionary<_, _>) expr =
             (eval context trueBranch)
         else
             (eval context elseBranch)
+    | BooleanExpr _ -> failwith "Boolean and Int don't match"
 
-let rec evalStmt context stmt =
+let rec evalStmt (context: Context<_> as (varType, _)) stmt =
+
     match stmt with
-    | VarAssignment(varName, expr) -> Some(varName, eval context expr)
-    | Print expr ->
+    | VarAssignment(varName, expr) when varType = Some Integer -> Some(varName, eval context expr)
+    | Print expr when varType = Some Integer ->
         printfn $"{eval context expr}"
         None
+    | _ -> failwith "Can't evaluate statement. Missing type information."
+
 
 let evalProgram (statements: list<SourceAst>) =
-    let context = Dictionary<string, int>()
+
+    let ctx = Context(None, Dictionary<string, int>())
 
     List.fold
-        (fun (context: Dictionary<_, _>) stmt ->
+        (fun (context: Context<_> as (_, ctx)) stmt ->
+
             let res = evalStmt context stmt
 
             match res with
             | Some(varName, res) ->
-                if context.ContainsKey varName then
-                    context[varName] <- res
+                if ctx.ContainsKey varName then
+                    ctx[varName] <- res
                 else
-                    context.Add(varName, res)
+                    ctx.Add(varName, res)
             | None -> ()
 
             context
         )
-        context
-        (optimize context statements)
+
+        ctx
+
+        (optimize ctx statements)
+
     |> ignore

@@ -1,24 +1,62 @@
 module SimpleParser.Analyzer
 
-open AST
+open SimpleParser.AST
 
-let optimize context statements =
+let optimize (context: Context<_>) statements =
 
-    let rec inner context expression =
+    let isIntOrNone =
+        fun varType ->
+            varType = Some Integer
+            || varType = None
+
+    let isBoolOrNone =
+        fun varType ->
+            varType = Some Boolean
+            || varType = None
+
+    let rec inner (varType: VarType option) expression =
         match expression with
-        | Number n -> Number n
-        | Multiply expressionList -> Multiply(List.map (inner context) expressionList)
-        | Add expressionList -> Add(List.map (inner context) expressionList)
+        | Number n when isIntOrNone varType -> Number n, Some Integer
+        | BooleanExpr boolVal when isBoolOrNone varType -> BooleanExpr boolVal, Some Boolean
+        | Multiply exprList when isIntOrNone varType ->
+            let optimizedExprList, inferredType = List.mapFold inner varType exprList
+            Multiply optimizedExprList, inferredType
+        | Add exprList when isIntOrNone varType ->
+            let optimizedExprList, inferredType = List.mapFold inner varType exprList
+            Add optimizedExprList, inferredType
         | IfThenElse(conditional, trueBranch, elseBranch) ->
             match conditional with
-            | True -> inner context trueBranch
-            | False -> inner context elseBranch
-            | BooleanExpression(operator, lhs, rhs) -> IfThenElse(BooleanExpression(operator, inner context lhs, inner context rhs), inner context trueBranch, inner context elseBranch)
-        | Var varName -> Var varName
+            | True -> inner varType trueBranch
+            | False -> inner varType elseBranch
+            | BooleanExpression(operator, lhs, rhs) ->
+                let optimizedLhs, _ = inner varType lhs
+                let optimizedRhs, _ = inner varType rhs
+                let optimizedTrueBranch, inferredTypeFromThen = inner varType trueBranch
+                let optimizedElseBranch, _ = inner inferredTypeFromThen elseBranch
+                IfThenElse(BooleanExpression(operator, optimizedLhs, optimizedRhs), optimizedTrueBranch, optimizedElseBranch), inferredTypeFromThen
+        | Var(varName, ownVarType) ->
+            match ownVarType, varType with
+            | ownVarType, None -> Var(varName, ownVarType), Some ownVarType
+            | Integer, Some Integer
+            | Boolean, Some Boolean -> Var(varName, ownVarType), varType
+            | _ -> failwith $"The type {ownVarType.ToString()} of variable {varName} doesn't match the inferred type of expression."
 
-    let eliminateRedundantIfThenElse context statement =
+        | _ when varType.IsSome -> failwith $"Expression types don't match. Expected {varType.Value.ToString()}"
+        | e -> failwith $"Unhandled exception. Expression that caused en error:\n{e}"
+
+    let optimizeStatements (context: Context<_> as (varType, _)) statement =
+
         match statement with
-        | VarAssignment(varName, value) -> VarAssignment(varName, inner context value)
-        | Print expression -> Print(inner context expression)
+        | VarAssignment(varName, value) ->
+            VarAssignment(
+                varName,
+                inner varType value
+                |> fst
+            )
+        | Print expression ->
+            Print(
+                inner varType expression
+                |> fst
+            )
 
-    List.map (eliminateRedundantIfThenElse context) statements
+    List.map (optimizeStatements context) statements

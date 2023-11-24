@@ -7,6 +7,11 @@ type VarType =
     | Integer
     | Boolean
 
+    override this.ToString() =
+        match this with
+        | Integer -> "integer"
+        | Boolean -> "boolean"
+
 type Context<'a> = VarType option * Dictionary<string, 'a>
 
 type RelationalOperator =
@@ -59,7 +64,7 @@ and SourceExpr =
     | Multiply of list<SourceExpr>
     | Add of list<SourceExpr>
     | IfThenElse of condition: BooleanValue * trueBranch: SourceExpr * elseBranch: SourceExpr
-    | Var of string
+    | Var of string * VarType
 
 type SourceAst =
     | VarAssignment of string * SourceExpr
