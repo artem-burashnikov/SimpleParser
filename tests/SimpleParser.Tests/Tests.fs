@@ -176,9 +176,6 @@ module IncorrectManualTests =
         | Some(_, ast) -> ast
 
 
-    // let ac = makeAST incorrectInputFiles["invalidIdentifier"]
-    // Expect.equal ac ac ""
-
     [<Tests>]
     let tests =
         testList "Deliberate mistakes" [
