@@ -76,7 +76,6 @@ let evalProgram (statements: list<SourceAst>) =
 
     List.fold
         (fun (context: Context<_> as (_, ctx)) stmt ->
-
             let res = evalStmt context stmt
 
             match res with
@@ -89,9 +88,6 @@ let evalProgram (statements: list<SourceAst>) =
 
             context
         )
-
         ctx
-
         (optimize ctx statements)
-
     |> ignore
