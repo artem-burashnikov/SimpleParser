@@ -8,14 +8,7 @@
     <ItemGroup>
         <Compile Include="Tests.fs" />
         <Compile Include="Main.fs" />
-        <Content Include="TestData\CorrectInput\addition.txt" />
-        <Content Include="TestData\CorrectInput\arithmetic.txt" />
-        <Content Include="TestData\CorrectInput\falseIF.txt" />
-        <Content Include="TestData\CorrectInput\identifier.txt" />
-        <Content Include="TestData\CorrectInput\multiplication.txt" />
-        <Content Include="TestData\CorrectInput\trueIF.txt" />
-        <Content Include="TestData\CorrectInput\arithmeticIF.txt" />
-        <Content Include="TestData\CorrectInput\nestedIFs.txt" />
+        <Content Include="TestData\CorrectInput\" />
         <Folder Include="TestData\IncorrectInput\" />
     </ItemGroup>
     <ItemGroup>
