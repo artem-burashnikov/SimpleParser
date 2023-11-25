@@ -13,7 +13,15 @@ type VarType =
         | Boolean -> "boolean"
         | Undefined -> "undefined"
 
-type Context<'a> = VarType option * Dictionary<string, 'a>
+type Context =
+    val mutable ExprType: VarType
+    val VariablesCtx: Dictionary<string, VarType * obj>
+
+    new(exprType, variablesContext) =
+        {
+            ExprType = exprType
+            VariablesCtx = variablesContext
+        }
 
 type RelationalOperator =
     | LessThanOrEqual
@@ -58,3 +66,8 @@ and SourceExpr =
 type SourceAst =
     | VarAssignment of string * SourceExpr
     | Print of SourceExpr
+
+type ProgramResult =
+    | IntResult of (string * int) option
+    | BoolResult of (string * bool) option
+    | Unit

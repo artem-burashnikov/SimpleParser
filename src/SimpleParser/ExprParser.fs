@@ -44,7 +44,7 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
-    let parser = parseAltCombine [parseIfThenElse; parseNumber; fMap (fun varName -> Var(varName, Integer)) parseIdentifier]
+    let parser = parseAltCombine [parseIfThenElse; parseNumber; fMap (fun varName -> Var(varName, Undefined)) parseIdentifier]
 
     (parseList parser (parseIgnore (parseChar '*')) |> fMap Multiply) input
 
@@ -75,24 +75,24 @@ and parseIfThenElse input =
                 parseSeq (parseChar ')') (fun _ ->
                     parseSeq parseKeyWordThen (fun _ ->
                         parseSeq (parseChar '(') (fun _ ->
-                            parseSeq parseAdd (fun trueBranch ->
+                            parseSeq (parseAltCombine [parseConditional |> fMap BooleanExpr; parseAdd]) (fun trueBranch ->
                                 parseSeq (parseChar ')') (fun _ ->
                                     parseSeq parseKeyWordElse (fun _ ->
                                         parseSeq (parseChar '(') (fun _ ->
-                                            parseSeq parseAdd (fun elseBranch ->
+                                            parseSeq (parseAltCombine [parseConditional |> fMap BooleanExpr; parseAdd]) (fun elseBranch ->
                                                 (parseChar ')')
                                                 |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))))))))))))) input
 
 and parseAssignment input =
     parseSeq parseIdentifier (fun identifierName ->
         parseSeq (parseIgnore (parseChar '=')) (fun _ ->
-            parseAdd
+            parseAltCombine [parseConditional |> fMap BooleanExpr; parseAdd]
             |> fMap (fun expr -> VarAssignment(identifierName, expr)))) input
 
 let parseKeyWordPrint = parseKeyWord "print"
 
 let parsePrint =
-    parseSeq parseKeyWordPrint (fun _ -> parseSeq (parseChar ':') (fun _ -> fMap Print parseAdd))
+    parseSeq parseKeyWordPrint (fun _ -> parseSeq (parseChar ':') (fun _ -> fMap Print (parseAltCombine [parseConditional |> fMap BooleanExpr; parseAdd])))
 
 let parseProgram =
     parseList (parseAlt parseAssignment parsePrint) (parseIgnore (parseChar '\n'))

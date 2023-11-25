@@ -2,61 +2,91 @@ module SimpleParser.Analyzer
 
 open SimpleParser.Definitions
 
-let optimize (context: Context<_>) statements =
+let optimize (context: Context) statements =
 
-    let isIntOrNone =
-        fun varType ->
-            varType = Some Integer
-            || varType = None
-
-    let isBoolOrNone =
-        fun varType ->
-            varType = Some Boolean
-            || varType = None
-
-    let rec inner (varType: VarType option) expression =
+    let rec inner (context: Context) expression =
         match expression with
-        | Number n when isIntOrNone varType -> Number n, Some Integer
-        | BooleanExpr boolVal when isBoolOrNone varType -> BooleanExpr boolVal, Some Boolean
-        | Multiply exprList when isIntOrNone varType ->
-            let optimizedExprList, inferredType = List.mapFold inner varType exprList
-            Multiply optimizedExprList, inferredType
-        | Add exprList when isIntOrNone varType ->
-            let optimizedExprList, inferredType = List.mapFold inner varType exprList
-            Add optimizedExprList, inferredType
+        | Number n -> Number n
+
+        | BooleanExpr boolVal ->
+            match boolVal with
+            | True
+            | False when
+                context.ExprType
+                <> Integer
+                ->
+                context.ExprType <- Boolean
+                BooleanExpr boolVal
+            | Expression(op, lhs, rhs) ->
+                let analyzedLhs = inner context lhs
+                let analyzedRhs = inner context rhs
+                BooleanExpr(Expression(op, analyzedLhs, analyzedRhs))
+            | _ -> failwith "Type integer and boolean value in boolean expression don't match."
+
+        | Multiply [ x ] -> inner context x
+
+        | Multiply [ lhs; rhs ] ->
+            let analyzedLhs = inner context lhs
+            let analyzedRhs = inner context rhs
+            context.ExprType <- Integer
+
+            Multiply [
+                analyzedLhs
+                analyzedRhs
+            ]
+
+        | Add [ x ] -> inner context x
+
+        | Add [ lhs; rhs ] ->
+            let analyzedLhs = inner context lhs
+            let analyzedRhs = inner context rhs
+            context.ExprType <- Integer
+
+            Add [
+                analyzedLhs
+                analyzedRhs
+            ]
+
         | IfThenElse(conditional, trueBranch, elseBranch) ->
             match conditional with
-            | True -> inner varType trueBranch
-            | False -> inner varType elseBranch
+            | True -> inner context trueBranch
+            | False -> inner context elseBranch
             | Expression(operator, lhs, rhs) ->
-                let optimizedLhs, _ = inner varType lhs
-                let optimizedRhs, _ = inner varType rhs
-                let optimizedTrueBranch, inferredTypeFromThen = inner varType trueBranch
-                let optimizedElseBranch, _ = inner inferredTypeFromThen elseBranch
-                IfThenElse(Expression(operator, optimizedLhs, optimizedRhs), optimizedTrueBranch, optimizedElseBranch), inferredTypeFromThen
+                let analyzedLhs = inner context lhs
+                let analyzedRhs = inner context rhs
+                let optimizedTrueBranch = inner context trueBranch
+                let optimizedElseBranch = inner context elseBranch
+                IfThenElse(Expression(operator, analyzedLhs, analyzedRhs), optimizedTrueBranch, optimizedElseBranch)
         | Var(varName, ownVarType) ->
-            match ownVarType, varType with
-            | ownVarType, None -> Var(varName, ownVarType), Some ownVarType
-            | Integer, Some Integer
-            | Boolean, Some Boolean -> Var(varName, ownVarType), varType
-            | _ -> failwith $"The type {ownVarType.ToString()} of variable {varName} doesn't match the inferred type of expression."
+            printfn $"varType: %A{varName}"
+            printfn $"ownVarType: %A{ownVarType}"
+            printfn $"%A{context.VariablesCtx}"
 
-        | _ when varType.IsSome -> failwith $"Expression types don't match. Expected {varType.Value.ToString()}"
+            if context.VariablesCtx.ContainsKey varName then
+                Var(varName, fst context.VariablesCtx[varName])
+            else
+                printfn $"own2 %A{ownVarType}"
+                printfn $"expr2 %A{context.ExprType}"
+
+                match ownVarType, context.ExprType with
+                | _, Undefined -> Var(varName, ownVarType)
+                | Undefined, exprType -> Var(varName, exprType)
+                | Integer, Integer -> Var(varName, Integer)
+                | Boolean, Boolean -> Var(varName, Boolean)
+                | _ -> failwith $"The type {ownVarType.ToString()} of variable {varName} doesn't match the inferred type of expression {context.ExprType}."
+
         | e -> failwith $"Unhandled exception. Expression that caused en error:\n{e}"
 
-    let optimizeStatements (context: Context<_> as (varType, _)) statement =
+    let optimizeStatements (context: Context) statement =
+
+        // printfn $"stmt %A{statement}"
 
         match statement with
         | VarAssignment(varName, value) ->
-            VarAssignment(
-                varName,
-                inner varType value
-                |> fst
-            )
+            let evaluatedValue = inner context value
+            VarAssignment(varName, evaluatedValue)
         | Print expression ->
-            Print(
-                inner varType expression
-                |> fst
-            )
+            let evaluatedValue = inner context expression
+            Print(evaluatedValue)
 
     List.map (optimizeStatements context) statements

@@ -4,39 +4,33 @@ open System.Collections.Generic
 open SimpleParser.Definitions
 open SimpleParser.Analyzer
 
-let rec eval (context: Context<_> as (_, ctx)) expr =
+let rec evalInt (context: Context) expr =
     match expr with
     | Number num -> num
-    | Multiply lst ->
+    | Multiply lst when context.ExprType = Integer ->
         lst
-        |> List.map (eval context)
+        |> List.map (evalInt context)
         |> List.reduce (*)
     | Add lst ->
         lst
-        |> List.map (eval context)
+        |> List.map (evalInt context)
         |> List.reduce (+)
     | Var(varName, _) ->
-        if ctx.ContainsKey varName then
-            ctx[varName]
-        else
-            failwithf $"Var with name {varName} is not declared."
+        match context.VariablesCtx, context.ExprType with
+        | d, Integer ->
+            if d.ContainsKey varName then
+                unbox<int> (snd d[varName])
+            else
+                failwithf $"Var with name {varName} is not declared."
+        | _ -> failwith $"Types don't match. {varName} is expected to be integer."
+
     | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
         let evaluatedCondition =
             match condition with
             | True -> true
             | False -> false
             | Expression(operator, lhs, rhs) ->
-                let computations = [|
-                    async { return eval context lhs }
-                    async { return eval context rhs }
-                |]
-
-                let result =
-                    computations
-                    |> Async.Parallel
-                    |> Async.RunSynchronously
-
-                let evaluatedLhs, evaluatedRhs = result[0], result[1]
+                let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
 
                 match operator with
                 | LessThanOrEqual ->
@@ -55,39 +49,116 @@ let rec eval (context: Context<_> as (_, ctx)) expr =
                     >= evaluatedRhs
 
         if evaluatedCondition then
-            (eval context trueBranch)
+            (evalInt context trueBranch)
         else
-            (eval context elseBranch)
-    | BooleanExpr _ -> failwith "Boolean and Int don't match"
+            (evalInt context elseBranch)
 
-let rec evalStmt (context: Context<_> as (varType, _)) stmt =
+    | e -> failwith $"Boolean and Int don't match. Expression that caused a failure: {e}"
 
+let rec evalBool (context: Context) expr =
+    match expr with
+    | Add [ x ] -> evalBool context x
+    | Multiply [ x ] -> evalBool context x
+    | BooleanExpr body ->
+        match body with
+        | True -> true
+        | False -> false
+        | Expression(operator, lhs, rhs) ->
+            let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
+
+            match operator with
+            | LessThanOrEqual ->
+                evaluatedLhs
+                <= evaluatedRhs
+            | LessThan -> evaluatedLhs < evaluatedRhs
+            | NotEqual ->
+                evaluatedLhs
+                <> evaluatedRhs
+            | Equal -> evaluatedLhs = evaluatedRhs
+            | GreaterThan ->
+                evaluatedLhs
+                >= evaluatedRhs
+            | GreaterThanOrEqual ->
+                evaluatedLhs
+                >= evaluatedRhs
+
+    | Var(varName, _) ->
+        match context.VariablesCtx, context.ExprType with
+        | d, Boolean ->
+            if d.ContainsKey varName then
+                unbox<bool> (snd d[varName])
+            else
+                failwithf $"Var with name {varName} is not declared."
+        | _ -> failwith $"Types don't match. {varName} is expected to be boolean."
+
+    | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
+        let evaluatedCondition =
+            match condition with
+            | True -> true
+            | False -> false
+            | Expression(operator, lhs, rhs) ->
+                let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
+
+                match operator with
+                | LessThanOrEqual ->
+                    evaluatedLhs
+                    <= evaluatedRhs
+                | LessThan -> evaluatedLhs < evaluatedRhs
+                | NotEqual ->
+                    evaluatedLhs
+                    <> evaluatedRhs
+                | Equal -> evaluatedLhs = evaluatedRhs
+                | GreaterThan ->
+                    evaluatedLhs
+                    >= evaluatedRhs
+                | GreaterThanOrEqual ->
+                    evaluatedLhs
+                    >= evaluatedRhs
+
+        if evaluatedCondition then
+            (evalBool context trueBranch)
+        else
+            (evalBool context elseBranch)
+
+    | e -> failwith $"{e}: Boolean and Int don't match"
+
+let rec evalStmt (context: Context) stmt =
     match stmt with
-    | VarAssignment(varName, expr) when varType = Some Integer -> Some(varName, eval context expr)
-    | Print expr when varType = Some Integer ->
-        printfn $"{eval context expr}"
-        None
+    | VarAssignment(varName, expr) when context.ExprType = Integer -> IntResult(Some(varName, evalInt context expr))
+    | VarAssignment(varName, expr) when context.ExprType = Boolean -> BoolResult(Some(varName, evalBool context expr))
+    | Print expr when
+        context.ExprType = Integer
+        || context.ExprType = Undefined
+        ->
+        printfn $"{evalInt context expr}"
+        Unit
+    | Print expr when context.ExprType = Boolean ->
+        printfn $"{evalBool context expr}"
+        Unit
     | _ -> failwith "Can't evaluate statement. Missing type information."
-
 
 let evalProgram (statements: list<SourceAst>) =
 
-    let ctx = Context(None, Dictionary<string, int>())
+    let globalContext = Context(Undefined, Dictionary<string, VarType * obj>())
 
-    List.fold
-        (fun (context: Context<_> as (_, ctx)) stmt ->
-            let res = evalStmt context stmt
+    let optimizedStatements = optimize globalContext statements
 
-            match res with
-            | Some(varName, res) ->
-                if ctx.ContainsKey varName then
-                    ctx[varName] <- res
-                else
-                    ctx.Add(varName, res)
-            | None -> ()
+    let folder (ctx: Context) (stmt: SourceAst) =
+        let res = evalStmt ctx stmt
 
-            context
-        )
+        match res with
+        | IntResult(Some(varName, evaluatedResult)) ->
+            if ctx.VariablesCtx.ContainsKey varName then
+                ctx.VariablesCtx[varName] <- fst ctx.VariablesCtx[varName], box evaluatedResult
+            else
+                ctx.VariablesCtx.Add(varName, (Integer, box evaluatedResult))
+        | BoolResult(Some(varName, evaluatedResult)) ->
+            if ctx.VariablesCtx.ContainsKey varName then
+                ctx.VariablesCtx[varName] <- fst ctx.VariablesCtx[varName], box evaluatedResult
+            else
+                ctx.VariablesCtx.Add(varName, (Boolean, box evaluatedResult))
+        | _ -> ()
+
         ctx
-        (optimize ctx statements)
-    |> ignore
+
+    List.fold folder globalContext optimizedStatements

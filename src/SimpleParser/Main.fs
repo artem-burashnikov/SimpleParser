@@ -56,5 +56,6 @@ module Main =
             | Some(_, ast) -> evalProgram ast
 
         run ()
+        |> ignore
 
         0
