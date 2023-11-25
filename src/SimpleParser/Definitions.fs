@@ -1,4 +1,4 @@
-module SimpleParser.AST
+module SimpleParser.Definitions
 
 open System.Collections.Generic
 open Microsoft.FSharp.Reflection
@@ -6,11 +6,13 @@ open Microsoft.FSharp.Reflection
 type VarType =
     | Integer
     | Boolean
+    | Undefined
 
     override this.ToString() =
         match this with
         | Integer -> "integer"
         | Boolean -> "boolean"
+        | Undefined -> "undefined"
 
 type Context<'a> = VarType option * Dictionary<string, 'a>
 

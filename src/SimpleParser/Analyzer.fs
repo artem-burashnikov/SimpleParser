@@ -1,6 +1,6 @@
 module SimpleParser.Analyzer
 
-open SimpleParser.AST
+open SimpleParser.Definitions
 
 let optimize (context: Context<_>) statements =
 

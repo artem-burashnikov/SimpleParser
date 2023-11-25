@@ -4,7 +4,7 @@ open System.Collections.Generic
 open Expecto
 open System.IO
 open SimpleParser.Combinators
-open SimpleParser.AST
+open SimpleParser.Definitions
 open SimpleParser.ExprParser
 
 module ManualTests =

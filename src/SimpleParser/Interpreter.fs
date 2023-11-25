@@ -1,7 +1,7 @@
 module SimpleParser.Interpreter
 
 open System.Collections.Generic
-open SimpleParser.AST
+open SimpleParser.Definitions
 open SimpleParser.Analyzer
 
 let rec eval (context: Context<_> as (_, ctx)) expr =
