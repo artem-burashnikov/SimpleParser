@@ -14,11 +14,15 @@ type VarType =
         | Undefined -> "undefined"
 
 type Context =
+    val mutable IntResult: int
+    val mutable BoolResult: bool
     val mutable ExprType: VarType
     val VariablesCtx: Dictionary<string, VarType * obj>
 
     new(exprType, variablesContext) =
         {
+            IntResult = 0
+            BoolResult = false
             ExprType = exprType
             VariablesCtx = variablesContext
         }
@@ -68,6 +72,6 @@ type SourceAst =
     | Print of SourceExpr
 
 type ProgramResult =
-    | IntResult of (string * int) option
-    | BoolResult of (string * bool) option
+    | IntResult of string * int
+    | BoolResult of string * bool
     | Unit

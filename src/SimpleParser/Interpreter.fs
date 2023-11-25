@@ -1,10 +1,34 @@
 module SimpleParser.Interpreter
 
 open System.Collections.Generic
+open Microsoft.FSharp.Core
 open SimpleParser.Definitions
 open SimpleParser.Analyzer
 
-let rec evalInt (context: Context) expr =
+let rec evalConditional context conditional =
+    match conditional with
+    | True -> true
+    | False -> false
+    | Expression(operator, lhs, rhs) ->
+        let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
+
+        match operator with
+        | LessThanOrEqual ->
+            evaluatedLhs
+            <= evaluatedRhs
+        | LessThan -> evaluatedLhs < evaluatedRhs
+        | NotEqual ->
+            evaluatedLhs
+            <> evaluatedRhs
+        | Equal -> evaluatedLhs = evaluatedRhs
+        | GreaterThan ->
+            evaluatedLhs
+            >= evaluatedRhs
+        | GreaterThanOrEqual ->
+            evaluatedLhs
+            >= evaluatedRhs
+
+and evalInt (context: Context) expr =
     match expr with
     | Number num -> num
     | Multiply lst when context.ExprType = Integer ->
@@ -23,65 +47,18 @@ let rec evalInt (context: Context) expr =
             else
                 failwithf $"Var with name {varName} is not declared."
         | _ -> failwith $"Types don't match. {varName} is expected to be integer."
-
     | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
-        let evaluatedCondition =
-            match condition with
-            | True -> true
-            | False -> false
-            | Expression(operator, lhs, rhs) ->
-                let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
-
-                match operator with
-                | LessThanOrEqual ->
-                    evaluatedLhs
-                    <= evaluatedRhs
-                | LessThan -> evaluatedLhs < evaluatedRhs
-                | NotEqual ->
-                    evaluatedLhs
-                    <> evaluatedRhs
-                | Equal -> evaluatedLhs = evaluatedRhs
-                | GreaterThan ->
-                    evaluatedLhs
-                    >= evaluatedRhs
-                | GreaterThanOrEqual ->
-                    evaluatedLhs
-                    >= evaluatedRhs
-
-        if evaluatedCondition then
+        if evalConditional context condition then
             (evalInt context trueBranch)
         else
             (evalInt context elseBranch)
-
     | e -> failwith $"Boolean and Int don't match. Expression that caused a failure: {e}"
 
-let rec evalBool (context: Context) expr =
+and evalBool (context: Context) expr =
     match expr with
     | Add [ x ] -> evalBool context x
     | Multiply [ x ] -> evalBool context x
-    | BooleanExpr body ->
-        match body with
-        | True -> true
-        | False -> false
-        | Expression(operator, lhs, rhs) ->
-            let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
-
-            match operator with
-            | LessThanOrEqual ->
-                evaluatedLhs
-                <= evaluatedRhs
-            | LessThan -> evaluatedLhs < evaluatedRhs
-            | NotEqual ->
-                evaluatedLhs
-                <> evaluatedRhs
-            | Equal -> evaluatedLhs = evaluatedRhs
-            | GreaterThan ->
-                evaluatedLhs
-                >= evaluatedRhs
-            | GreaterThanOrEqual ->
-                evaluatedLhs
-                >= evaluatedRhs
-
+    | BooleanExpr body -> evalConditional context body
     | Var(varName, _) ->
         match context.VariablesCtx, context.ExprType with
         | d, Boolean ->
@@ -92,48 +69,21 @@ let rec evalBool (context: Context) expr =
         | _ -> failwith $"Types don't match. {varName} is expected to be boolean."
 
     | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
-        let evaluatedCondition =
-            match condition with
-            | True -> true
-            | False -> false
-            | Expression(operator, lhs, rhs) ->
-                let evaluatedLhs, evaluatedRhs = evalInt context lhs, evalInt context rhs
-
-                match operator with
-                | LessThanOrEqual ->
-                    evaluatedLhs
-                    <= evaluatedRhs
-                | LessThan -> evaluatedLhs < evaluatedRhs
-                | NotEqual ->
-                    evaluatedLhs
-                    <> evaluatedRhs
-                | Equal -> evaluatedLhs = evaluatedRhs
-                | GreaterThan ->
-                    evaluatedLhs
-                    >= evaluatedRhs
-                | GreaterThanOrEqual ->
-                    evaluatedLhs
-                    >= evaluatedRhs
-
-        if evaluatedCondition then
+        if evalConditional context condition then
             (evalBool context trueBranch)
         else
             (evalBool context elseBranch)
-
     | e -> failwith $"{e}: Boolean and Int don't match"
 
 let rec evalStmt (context: Context) stmt =
     match stmt with
-    | VarAssignment(varName, expr) when context.ExprType = Integer -> IntResult(Some(varName, evalInt context expr))
-    | VarAssignment(varName, expr) when context.ExprType = Boolean -> BoolResult(Some(varName, evalBool context expr))
-    | Print expr when
-        context.ExprType = Integer
-        || context.ExprType = Undefined
-        ->
-        printfn $"{evalInt context expr}"
+    | VarAssignment(varName, expr) when context.ExprType = Integer -> IntResult(varName, evalInt context expr)
+    | VarAssignment(varName, expr) when context.ExprType = Boolean -> BoolResult(varName, evalBool context expr)
+    | Print expr when context.ExprType = Integer || context.ExprType = Undefined ->
+        context.IntResult <- evalInt context expr
         Unit
     | Print expr when context.ExprType = Boolean ->
-        printfn $"{evalBool context expr}"
+        context.BoolResult <- evalBool context expr
         Unit
     | _ -> failwith "Can't evaluate statement. Missing type information."
 
@@ -147,12 +97,12 @@ let evalProgram (statements: list<SourceAst>) =
         let res = evalStmt ctx stmt
 
         match res with
-        | IntResult(Some(varName, evaluatedResult)) ->
+        | IntResult(varName, evaluatedResult) ->
             if ctx.VariablesCtx.ContainsKey varName then
                 ctx.VariablesCtx[varName] <- fst ctx.VariablesCtx[varName], box evaluatedResult
             else
                 ctx.VariablesCtx.Add(varName, (Integer, box evaluatedResult))
-        | BoolResult(Some(varName, evaluatedResult)) ->
+        | BoolResult(varName, evaluatedResult) ->
             if ctx.VariablesCtx.ContainsKey varName then
                 ctx.VariablesCtx[varName] <- fst ctx.VariablesCtx[varName], box evaluatedResult
             else
