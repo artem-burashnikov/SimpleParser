@@ -26,7 +26,7 @@ let parseAlt (parser1: Parser<'A>) (parser2: Parser<'A>) : Parser<'A> =
 
 let rec parseAltCombine =
     function
-    | hd :: tl -> List.fold (fun state parser -> parseAlt parser state) hd tl
+    | hd :: tl -> List.fold parseAlt hd tl
     | _ -> failwith "parserAltCombine expects at least two elements in a list"
 
 let fMap (fnc: 'R1 -> 'R2) (parser: Parser<'R1>) : Parser<'R2> =

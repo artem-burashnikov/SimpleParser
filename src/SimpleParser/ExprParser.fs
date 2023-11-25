@@ -2,7 +2,7 @@ module SimpleParser.ExprParser
 
 open Microsoft.FSharp.Core
 open SimpleParser.Combinators
-open SimpleParser.AST
+open SimpleParser.Definitions
 
 let isOk =
     function
