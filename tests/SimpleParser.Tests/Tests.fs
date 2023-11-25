@@ -7,7 +7,7 @@ open SimpleParser.Combinators
 open SimpleParser.Definitions
 open SimpleParser.ExprParser
 
-module ManualTests =
+module CorrectManualTests =
 
     let correctTestDataPath =
         Path.Combine [|
@@ -43,7 +43,7 @@ module ManualTests =
                 let expectedResult = [
                     VarAssignment ("identifier", Add [Multiply [Number 42]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse assignment"
+                Expect.equal actualResult expectedResult "Failed to parse assignment."
 
             testCase "addition"
             <| fun _ ->
@@ -55,7 +55,7 @@ module ManualTests =
                     VarAssignment ("c", Add [Multiply [Var ("a", Integer)]; Multiply [Var ("b", Integer)]])
                     Print         (     Add [Multiply [Var ("b", Integer)]; Multiply [Var ("a", Integer)]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse addition"
+                Expect.equal actualResult expectedResult "Failed to parse addition."
 
             testCase "multiplication"
             <| fun _ ->
@@ -67,7 +67,7 @@ module ManualTests =
                     VarAssignment ("z", Add [Multiply [Var ("x", Integer); Var ("y", Integer)]])
                     VarAssignment ("w", Add [Multiply [Var ("y", Integer); Var ("x", Integer)]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse multiplication"
+                Expect.equal actualResult expectedResult "Failed to parse multiplication."
 
             testCase "arithmetic"
             <| fun _ ->
@@ -80,7 +80,7 @@ module ManualTests =
                     VarAssignment ("z", Add [Multiply [Var ("a", Integer)]; Multiply [Var ("b", Integer); Var ("c", Integer)]])
                     VarAssignment ("w", Add [Multiply [Var ("c", Integer); Var ("b", Integer)]; Multiply [Var ("a", Integer)]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse arithmetic"
+                Expect.equal actualResult expectedResult "Failed to parse arithmetic."
 
             testCase "arithmeticIF"
             <| fun _ ->
@@ -105,7 +105,7 @@ module ManualTests =
                                                                    Add [Multiply [Number 2]])
                                                        Var ("y", Integer)]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse arithmetic with if"
+                Expect.equal actualResult expectedResult "Failed to parse arithmetic with if."
 
             testCase "trueIF"
             <| fun _ ->
@@ -116,7 +116,7 @@ module ManualTests =
                                                                         Add [Multiply [Number 1]],
                                                                         Add [Multiply [Number 2]])]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse always true if"
+                Expect.equal actualResult expectedResult "Failed to parse always true if."
 
             testCase "falseIF"
             <| fun _ ->
@@ -127,7 +127,7 @@ module ManualTests =
                                                                          Add [Multiply [Var ("x", Integer)]],
                                                                          Add [Multiply [Number 2]])]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse always false if"
+                Expect.equal actualResult expectedResult "Failed to parse always false if."
 
             testCase "nestedIFs"
             <| fun _ ->
@@ -147,5 +147,105 @@ module ManualTests =
                                                                                               Add [Multiply [Number 2; Number 2]])]],
                                                                   Add [Multiply [Number 1]])]])]
 
-                Expect.equal actualResult expectedResult "Failed to parse nested ifs"
+                Expect.equal actualResult expectedResult "Failed to parse nested ifs."
         ]
+
+module IncorrectManualTests =
+
+    let incorrectTestDataPath =
+        Path.Combine [|
+            __SOURCE_DIRECTORY__
+            "TestData"
+            "IncorrectInput"
+        |]
+
+    let incorrectTestFiles = Directory.EnumerateFiles incorrectTestDataPath
+
+    let folder (state: Dictionary<_, _>) (value: string) =
+        state.Add((Path.GetFileNameWithoutExtension value), value)
+        state
+
+    let incorrectInputFiles = Seq.fold folder (Dictionary<string, string>()) incorrectTestFiles
+
+    let makeAST file =
+        let programCode =
+            String.concat "\n" (File.ReadAllLines file)
+
+        match run parseProgram programCode with
+        | None -> failtest "incorrect code input"
+        | Some(_, ast) -> ast
+
+
+    // let ac = makeAST incorrectInputFiles["invalidIdentifier"]
+    // Expect.equal ac ac ""
+
+    [<Tests>]
+    let tests =
+        testList "Deliberate mistakes" [
+            testCase "invalidAssignment"
+            <| fun _ ->
+                Expect.throws (fun _ -> makeAST incorrectInputFiles["invalidAssignment"] |> ignore) "Invalid assignment has been parsed."
+
+            testCase "invalidIdentifier"
+            <| fun _ ->
+                Expect.throws (fun _ -> makeAST incorrectInputFiles["invalidIdentifier"] |> ignore) "Invalid identifier has been parsed."
+
+            testCase "invalidRelationalOp"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["invalidRelationalOp"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Var ("if", Integer)]])
+                ]
+
+                Expect.equal actualResult expectedResult "InvalidRelationalOp managed to parse correctly. 'if' can't be a Var."
+
+            testCase "missingElse"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["missingElse"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Var ("if", Integer)]])
+                ]
+
+                Expect.equal actualResult expectedResult "MissingElse expression managed to parse correctly. 'if' can't be a Var."
+
+            testCase "missingThen"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["missingThen"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Var ("if", Integer)]])
+                ]
+
+                Expect.equal actualResult expectedResult "MissingThen expression managed to parse correctly. 'if' can't be a Var."
+
+            testCase "missingPrint"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["missingPrint"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Number 10]])
+                ]
+
+                Expect.equal actualResult expectedResult "MissingPrint expression managed to parse correctly. Empty variables should have not been parsed."
+
+            testCase "missingConditionalParentheses"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["missingConditionalParentheses"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Var ("iftruethen", Integer)]])
+                ]
+
+                Expect.equal actualResult expectedResult "MissingConditionalParentheses expression managed to parse correctly. 'iftruethen' followed by correct IfClause syntax should have not been parsed."
+
+            testCase "statementInBranch"
+            <| fun _ ->
+                let actualResult = makeAST incorrectInputFiles["statementInBranch"]
+
+                let expectedResult = [
+                    VarAssignment ("x", Add [Multiply [Var ("if", Integer)]])
+                ]
+
+                Expect.equal actualResult expectedResult "StatementInBranch expression managed to parse correctly. Statements are not expressions." ]

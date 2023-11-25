@@ -1,0 +1,1 @@
+x=if(true)then(print:10)else(3)
