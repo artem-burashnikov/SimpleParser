@@ -58,7 +58,7 @@ type RelationalOperator =
 and BooleanValue =
     | True
     | False
-    | BooleanExpression of RelationalOperator * SourceExpr * SourceExpr
+    | Expression of RelationalOperator * SourceExpr * SourceExpr
 
 and SourceExpr =
     | Number of int

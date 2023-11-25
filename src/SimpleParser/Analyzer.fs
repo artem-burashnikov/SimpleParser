@@ -28,12 +28,12 @@ let optimize (context: Context<_>) statements =
             match conditional with
             | True -> inner varType trueBranch
             | False -> inner varType elseBranch
-            | BooleanExpression(operator, lhs, rhs) ->
+            | Expression(operator, lhs, rhs) ->
                 let optimizedLhs, _ = inner varType lhs
                 let optimizedRhs, _ = inner varType rhs
                 let optimizedTrueBranch, inferredTypeFromThen = inner varType trueBranch
                 let optimizedElseBranch, _ = inner inferredTypeFromThen elseBranch
-                IfThenElse(BooleanExpression(operator, optimizedLhs, optimizedRhs), optimizedTrueBranch, optimizedElseBranch), inferredTypeFromThen
+                IfThenElse(Expression(operator, optimizedLhs, optimizedRhs), optimizedTrueBranch, optimizedElseBranch), inferredTypeFromThen
         | Var(varName, ownVarType) ->
             match ownVarType, varType with
             | ownVarType, None -> Var(varName, ownVarType), Some ownVarType

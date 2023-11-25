@@ -68,7 +68,7 @@ and parseConditionalExpression input =
 
     parseSeq parseAdd (fun lhs ->
         parseSeq parseOp (fun op ->
-            parseAdd |> fMap (fun rhs -> BooleanExpression(op, lhs, rhs)))) input
+            parseAdd |> fMap (fun rhs -> Expression(op, lhs, rhs)))) input
 
 and parseConditional input =
     parseAltCombine [parseBooleanTrue; parseBooleanFalse; parseConditionalExpression] input

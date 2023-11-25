@@ -25,7 +25,7 @@ let rec eval (context: Context<_> as (_, ctx)) expr =
             match condition with
             | True -> true
             | False -> false
-            | BooleanExpression(operator, lhs, rhs) ->
+            | Expression(operator, lhs, rhs) ->
                 let computations = [|
                     async { return eval context lhs }
                     async { return eval context rhs }

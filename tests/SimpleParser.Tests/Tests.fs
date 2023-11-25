@@ -91,14 +91,14 @@ module ManualTests =
                     VarAssignment ("x", Add [Multiply [Number 10]])
                     VarAssignment ("z", Add [
                                              Multiply [Var ("x", Integer); Var ("y", Integer)]
-                                             Multiply [IfThenElse (BooleanExpression (GreaterThan,
+                                             Multiply [IfThenElse (Expression (GreaterThan,
                                                                                       Add [Multiply [Var ("x", Integer)]],
                                                                                       Add [Multiply [Number 10]]),
                                                                    Add [Multiply [Number 1]],
                                                                    Add [Multiply [Number 2]])]
                                              Multiply [
                                                        Var ("x", Integer)
-                                                       IfThenElse (BooleanExpression (LessThan,
+                                                       IfThenElse (Expression (LessThan,
                                                                                       Add [Multiply [Var ("y", Integer)]],
                                                                                       Add [Multiply [Number 20]]),
                                                                    Add [Multiply [Number 1]],
@@ -137,10 +137,10 @@ module ManualTests =
                     VarAssignment ("x", Add [Multiply [Number 100]])
                     VarAssignment ("y", Add [Multiply [Number 1]])
                     VarAssignment ("r", Add [Multiply
-                                                     [IfThenElse (BooleanExpression (GreaterThan,
+                                                     [IfThenElse (Expression (GreaterThan,
                                                                                      Add [Multiply [Var ("x", Integer)]],
                                                                                      Add [Multiply [Var ("y", Integer)]]),
-                                                                  Add [Multiply [IfThenElse (BooleanExpression (LessThan,
+                                                                  Add [Multiply [IfThenElse (Expression (LessThan,
                                                                                                                  Add [Multiply [Var ("x", Integer)]],
                                                                                                                  Add [Multiply [Var ("y", Integer)]]),
                                                                                               Add [Multiply [Number 10]; Multiply [Var ("r", Integer)]],
