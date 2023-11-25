@@ -24,7 +24,23 @@ let parseBooleanTrue =
 let parseBooleanFalse =
     parseSeq (parseIgnore (parseKeyWord "false")) (fun _ -> fMap (fun _ -> False) parseEpsilon)
 
-let parseBooleanValue = parseAlt parseBooleanTrue parseBooleanFalse
+let parseLessThanOrEqual =
+    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> LessThanOrEqual) parseEpsilon)
+
+let parseNotEqual =
+    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
+
+let parseGreaterThanOrEqual =
+    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
+
+let parseEqual =
+    parseSeq (parseIgnore (parseKeyWord "=")) (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
+
+let parseGreaterThan =
+    parseSeq (parseIgnore (parseKeyWord ">")) (fun _ -> fMap (fun _ -> GreaterThan) parseEpsilon)
+
+let parseLessThen =
+    parseSeq (parseIgnore (parseKeyWord "<")) (fun _ -> fMap (fun _ -> LessThan) parseEpsilon)
 
 let parseKeyWordIf = parseKeyWord "if"
 
@@ -33,44 +49,29 @@ let parseKeyWordThen = parseKeyWord "then"
 let parseKeyWordElse = parseKeyWord "else"
 
 let rec parseMultiply input =
-    let alt1 = parseIfThenElse
-    let alt2 = parseAlt parseNumber (fMap (fun varName -> Var(varName, Integer) )parseIdentifier)
+    let parser = parseAltCombine [parseIfThenElse; parseNumber; fMap (fun varName -> Var(varName, Integer)) parseIdentifier]
 
-    (parseList (parseAlt alt1 alt2) (parseIgnore (parseChar '*'))
-     |> fMap Multiply)
-    <| input
+    (parseList parser (parseIgnore (parseChar '*')) |> fMap Multiply) input
 
 and parseAdd input =
-    (parseList parseMultiply (parseIgnore (parseChar '+'))
-     |> fMap Add)
-    <| input
+    (parseList parseMultiply (parseIgnore (parseChar '+')) |> fMap Add) input
 
 and parseConditionalExpression input =
-    let mapper relationalOperator =
-        parseList parseAdd (parseIgnore (parseKeyWord relationalOperator))
-        |> fMap (
-            function
-            | [ lhs; rhs ] -> Ok (BooleanExpression(RelationalOperator.FromString relationalOperator, lhs, rhs))
-            | _ -> Error $"Failed to parse comparison operator: {relationalOperator}")
+    let parseOp = parseAltCombine [
+        parseLessThanOrEqual
+        parseNotEqual
+        parseGreaterThanOrEqual
+        parseEqual
+        parseGreaterThan
+        parseLessThen
+    ]
 
-    let operator =
-        Array.find
-            <| fun operatorKeyWord ->
-                match mapper operatorKeyWord input with
-                | Some(_, result) when isOk result -> true
-                | _ -> false
-            <| RelationalOperator.All()
-
-    mapper operator
-     |> fMap
-        (function
-         | Ok result -> result
-         | Error message -> failwith message)
-    <| input
+    parseSeq parseAdd (fun lhs ->
+        parseSeq parseOp (fun op ->
+            parseAdd |> fMap (fun rhs -> BooleanExpression(op, lhs, rhs)))) input
 
 and parseConditional input =
-    parseAlt parseBooleanValue parseConditionalExpression
-    <| input
+    parseAltCombine [parseBooleanTrue; parseBooleanFalse; parseConditionalExpression] input
 
 and parseIfThenElse input =
     parseSeq parseKeyWordIf (fun _ ->
@@ -85,15 +86,13 @@ and parseIfThenElse input =
                                         parseSeq (parseChar '(') (fun _ ->
                                             parseSeq parseAdd (fun elseBranch ->
                                                 (parseChar ')')
-                                                |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch)))))))))))))
-    <| input
+                                                |> fMap (fun _ -> IfThenElse(cond, trueBranch, elseBranch))))))))))))) input
 
 and parseAssignment input =
     parseSeq parseIdentifier (fun identifierName ->
         parseSeq (parseIgnore (parseChar '=')) (fun _ ->
             parseAdd
-            |> fMap (fun expr -> VarAssignment(identifierName, expr))))
-    <| input
+            |> fMap (fun expr -> VarAssignment(identifierName, expr)))) input
 
 let parseKeyWordPrint = parseKeyWord "print"
 
