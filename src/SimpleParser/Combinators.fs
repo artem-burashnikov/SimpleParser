@@ -24,6 +24,11 @@ let parseAlt (parser1: Parser<'A>) (parser2: Parser<'A>) : Parser<'A> =
         | None -> parser2 input
         | parsedInput -> parsedInput
 
+let rec parseAltCombine =
+    function
+    | hd :: tl -> List.fold (fun state parser -> parseAlt parser state) hd tl
+    | _ -> failwith "parserAltCombine expects at least two elements in a list"
+
 let fMap (fnc: 'R1 -> 'R2) (parser: Parser<'R1>) : Parser<'R2> =
     fun input ->
         match parser input with
@@ -54,21 +59,17 @@ let parseKeyWord (kw: string) : Parser<string> =
     let chars = kw.ToCharArray()
 
     let folder =
-        fun stateParser currChar ->
-            parseSeq stateParser (fun result ->
+        fun parser currChar ->
+            parseSeq parser (fun result ->
                 (parseChar currChar)
-                |> fMap (fun char -> char :: result)
-            )
-    let stateParser = (fMap (fun _ -> []) parseEpsilon)
+                |> fMap (fun char -> char :: result))
+    let state = (fMap (fun _ -> []) parseEpsilon)
     let array = chars
 
-    Array.fold folder stateParser array
+    Array.fold folder state array
     |> fMap (fun charList -> charList |> List.rev |> Array.ofList |> System.String)
 
 let run =
     fun (parser: Parser<'R>) (input: string) ->
-        let listOfChars =
-            input.ToCharArray()
-            |> List.ofArray
-
+        let listOfChars = input.ToCharArray() |> List.ofArray
         parser listOfChars
