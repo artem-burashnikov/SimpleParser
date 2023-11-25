@@ -1,7 +1,6 @@
 module SimpleParser.Definitions
 
 open System.Collections.Generic
-open Microsoft.FSharp.Reflection
 
 type VarType =
     | Integer
@@ -32,18 +31,6 @@ type RelationalOperator =
         | Equal -> "="
         | GreaterThan -> ">"
         | LessThan -> "<"
-
-    /// <summary>
-    /// Gets an array of all available relational operator's keywords.
-    /// </summary>
-    static member All() =
-        let cases = FSharpType.GetUnionCases(typeof<RelationalOperator>)
-
-        [|
-            for case in cases do
-                let operator = FSharpValue.MakeUnion(case, [||]) :?> RelationalOperator
-                yield operator.ToString()
-        |]
 
     static member FromString str =
         match str with

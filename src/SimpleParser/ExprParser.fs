@@ -4,11 +4,6 @@ open Microsoft.FSharp.Core
 open SimpleParser.Combinators
 open SimpleParser.Definitions
 
-let isOk =
-    function
-    | Ok _ -> true
-    | Error _ -> false
-
 let parseIdentifier: Parser<string> =
     parseSome (satisfy (fun x -> List.contains x [ 'a' .. 'z' ]))
     |> fMap (fun res -> res |> Array.ofList |> System.String)
