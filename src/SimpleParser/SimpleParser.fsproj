@@ -21,6 +21,7 @@
     <Compile Include="ExprParser.fs" />
     <Compile Include="Analyzer.fs" />
     <Compile Include="Interpreter.fs" />
+    <Compile Include="Generator.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
