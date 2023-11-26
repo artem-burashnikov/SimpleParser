@@ -43,7 +43,7 @@ let optimize (context: Context) statements =
         | BooleanExpr boolVal ->
             match boolVal with
             | True
-            | False when context.ExprType <> Integer ->
+            | False ->
                 context.ExprType <- Boolean
                 BooleanExpr boolVal
             | Expression(op, lhs, rhs) ->
@@ -51,7 +51,6 @@ let optimize (context: Context) statements =
                 let analyzedLhs = inner context lhs
                 let analyzedRhs = inner context rhs
                 BooleanExpr(Expression(op, analyzedLhs, analyzedRhs))
-            | _ -> failwith "Type integer and boolean value in boolean expression don't match."
         | Multiply [ x ] -> inner context x
         | Multiply (hd :: tl) ->
             context.ExprType <- Integer
