@@ -331,147 +331,81 @@ module CorrectInterpreterManualTests =
                 let actualResult = makeAST correctInputFiles["addition"] |> evalProgram
                 let expectedResult = 12
 
-                Expect.equal actualResult.IntResult expectedResult "Failed to parse addition."
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate addition."
 
-            // testCase "Parsing: multiplication"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["multiplication"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", Add [Multiply [Number 8]])
-            //         VarAssignment ("y", Add [Multiply [Number 3]])
-            //         VarAssignment ("z", Add [Multiply [Var ("x", Undefined); Var ("y", Undefined)]])
-            //         VarAssignment ("w", Add [Multiply [Var ("y", Undefined); Var ("x", Undefined)]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse multiplication."
-            //
-            // testCase "Parsing: arithmetic"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["arithmetic"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("a", Add [Multiply [Number 3]])
-            //         VarAssignment ("b", Add [Multiply [Number 5]])
-            //         VarAssignment ("c", Add [Multiply [Number 2]])
-            //         VarAssignment ("z", Add [Multiply [Var ("a", Undefined)]; Multiply [Var ("b", Undefined); Var ("c", Undefined)]])
-            //         VarAssignment ("w", Add [Multiply [Var ("c", Undefined); Var ("b", Undefined)]; Multiply [Var ("a", Undefined)]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse arithmetic."
-            //
-            // testCase "Parsing: arithmeticIF"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["arithmeticIF"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("y", Add [Multiply [Number 5]])
-            //         VarAssignment ("x", Add [Multiply [Number 10]])
-            //         VarAssignment ("z", Add [
-            //                                  Multiply [Var ("x", Undefined); Var ("y", Undefined)]
-            //                                  Multiply [IfThenElse (Expression (GreaterThan,
-            //                                                                           Add [Multiply [Var ("x", Undefined)]],
-            //                                                                           Add [Multiply [Number 10]]),
-            //                                                        Add [Multiply [Number 1]],
-            //                                                        Add [Multiply [Number 2]])]
-            //                                  Multiply [
-            //                                            Var ("x", Undefined)
-            //                                            IfThenElse (Expression (LessThan,
-            //                                                                           Add [Multiply [Var ("y", Undefined)]],
-            //                                                                           Add [Multiply [Number 20]]),
-            //                                                        Add [Multiply [Number 1]],
-            //                                                        Add [Multiply [Number 2]])
-            //                                            Var ("y", Undefined)]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse arithmetic with if."
-            //
-            // testCase "Parsing: trueIF"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["trueIF"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("result", Add [Multiply [IfThenElse (True,
-            //                                                             Add [Multiply [Number 1]],
-            //                                                             Add [Multiply [Number 2]])]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse always true if."
-            //
-            // testCase "Parsing: falseIF"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["falseIF"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("result", Add [Multiply [IfThenElse (False,
-            //                                                              Add [Multiply [Var ("x", Undefined)]],
-            //                                                              Add [Multiply [Number 2]])]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse always false if."
-            //
-            // testCase "Parsing: nestedIFs"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["nestedIFs"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", Add [Multiply [Number 100]])
-            //         VarAssignment ("y", Add [Multiply [Number 1]])
-            //         VarAssignment ("r", Add [Multiply
-            //                                          [IfThenElse (Expression (GreaterThan,
-            //                                                                          Add [Multiply [Var ("x", Undefined)]],
-            //                                                                          Add [Multiply [Var ("y", Undefined)]]),
-            //                                                       Add [Multiply [IfThenElse (Expression (LessThan,
-            //                                                                                                      Add [Multiply [Var ("x", Undefined)]],
-            //                                                                                                      Add [Multiply [Var ("y", Undefined)]]),
-            //                                                                                   Add [Multiply [Number 10]; Multiply [Var ("r", Undefined)]],
-            //                                                                                   Add [Multiply [Number 2; Number 2]])]],
-            //                                                       Add [Multiply [Number 1]])]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse nested ifs."
-            //
-            // testCase "Parsing: trueAssignment"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["trueAssignment"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", BooleanExpr True)
-            //         Print (Add [Multiply [Var ("x", Undefined)]])
-            //     ]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse trueAssignment."
-            //
-            // testCase "Parsing: falseAssignment"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["falseAssignment"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", BooleanExpr False)
-            //         Print (Add [Multiply [Var ("x", Undefined)]])
-            //     ]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse falseAssignment."
-            //
-            // testCase "Parsing: boolExpression"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["boolExpression"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", Add [Multiply [Number 2]])
-            //         VarAssignment ("y", Add [Multiply [Number 3]])
-            //         Print (BooleanExpr (Expression (LessThan,
-            //                                         Add [Multiply [Var ("x", Undefined)]],
-            //                                         Add [Multiply [Var ("y", Undefined)]])))]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse boolExpression."
-            //
-            //
-            // testCase "Parsing: boolValueFromIF"
-            // <| fun _ ->
-            //     let actualResult = makeAST correctInputFiles["boolValueFromIF"]
-            //
-            //     let expectedResult = [
-            //         VarAssignment ("x", Add [Multiply [IfThenElse (True,
-            //                                                        BooleanExpr True,
-            //                                                        BooleanExpr False)]])
-            //         Print (             Add [Multiply [IfThenElse (True,
-            //                                                        BooleanExpr True,
-            //                                                        BooleanExpr False)]])]
-            //
-            //     Expect.equal actualResult expectedResult "Failed to parse boolValueFromIF."
-            ]
+            testCase "Interpreter: arithmetic"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["arithmetic"] |> evalProgram
+                let expectedResult = 13
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate multiplication."
+
+            testCase "Interpreting: arithmeticIF"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["arithmeticIF"] |> evalProgram
+                let expectedResult = 102
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate arithmeticIF."
+
+            testCase "Interpreter: boolExpression"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["boolExpression"] |> evalProgram
+                let expectedResult = true
+
+                Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate bool expression."
+
+            testCase "Interpreter: boolValueFromIF"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["boolValueFromIF"] |> evalProgram
+                let expectedResult = true
+
+                Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate boolValueFromIF."
+
+            testCase "Interpreter: falseAssignment"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["falseAssignment"] |> evalProgram
+                let expectedResult = false
+
+                Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate falseAssignment."
+
+            testCase "Interpreter: falseIF"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["falseIF"] |> evalProgram
+                let expectedResult = 2
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate falseIF."
+
+            testCase "Interpreter: identifier"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["identifier"] |> evalProgram
+                let expectedResult = 42
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate identifier."
+
+            testCase "Interpreter: multiplication"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["multiplication"] |> evalProgram
+                let expectedResult = 24
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate identifier."
+
+            testCase "Interpreter: nestedIFs"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["nestedIFs"] |> evalProgram
+                let expectedResult = 4
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate nestedIFs."
+
+            testCase "Interpreter: trueAssignment"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["trueAssignment"] |> evalProgram
+                let expectedResult = true
+
+                Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate trueAssignment."
+
+            testCase "Interpreter: trueIF"
+            <| fun _ ->
+                let actualResult = makeAST correctInputFiles["trueIF"] |> evalProgram
+                let expectedResult = 1
+
+                Expect.equal actualResult.IntResult expectedResult "Failed to evaluate trueIF." ]
