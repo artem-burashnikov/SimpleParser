@@ -54,7 +54,8 @@ module ParsingCorrectManualTests =
                 let actualResult = makeAST correctInputFiles["identifier"]
 
                 let expectedResult = [
-                    VarAssignment ("identifier", Add [Multiply [Number 42]])]
+                    VarAssignment ("identifier", Add [Multiply [Number 42]])
+                    Print (Add [Multiply [Var ("identifier", Undefined)]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse assignment."
 
@@ -78,7 +79,8 @@ module ParsingCorrectManualTests =
                     VarAssignment ("x", Add [Multiply [Number 8]])
                     VarAssignment ("y", Add [Multiply [Number 3]])
                     VarAssignment ("z", Add [Multiply [Var ("x", Undefined); Var ("y", Undefined)]])
-                    VarAssignment ("w", Add [Multiply [Var ("y", Undefined); Var ("x", Undefined)]])]
+                    VarAssignment ("w", Add [Multiply [Var ("y", Undefined); Var ("x", Undefined)]])
+                    Print (             Add [Multiply [Var ("w", Undefined)]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse multiplication."
 
@@ -91,7 +93,7 @@ module ParsingCorrectManualTests =
                     VarAssignment ("b", Add [Multiply [Number 5]])
                     VarAssignment ("c", Add [Multiply [Number 2]])
                     VarAssignment ("z", Add [Multiply [Var ("a", Undefined)]; Multiply [Var ("b", Undefined); Var ("c", Undefined)]])
-                    VarAssignment ("w", Add [Multiply [Var ("c", Undefined); Var ("b", Undefined)]; Multiply [Var ("a", Undefined)]])]
+                    Print (             Add [Multiply [Var ("c", Undefined); Var ("b", Undefined)]; Multiply [Var ("a", Undefined)]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse arithmetic."
 
@@ -102,7 +104,7 @@ module ParsingCorrectManualTests =
                 let expectedResult = [
                     VarAssignment ("y", Add [Multiply [Number 5]])
                     VarAssignment ("x", Add [Multiply [Number 10]])
-                    VarAssignment ("z", Add [
+                    Print (             Add [
                                              Multiply [Var ("x", Undefined); Var ("y", Undefined)]
                                              Multiply [IfThenElse (Expression (GreaterThan,
                                                                                       Add [Multiply [Var ("x", Undefined)]],
@@ -125,9 +127,9 @@ module ParsingCorrectManualTests =
                 let actualResult = makeAST correctInputFiles["trueIF"]
 
                 let expectedResult = [
-                    VarAssignment ("result", Add [Multiply [IfThenElse (True,
-                                                                        Add [Multiply [Number 1]],
-                                                                        Add [Multiply [Number 2]])]])]
+                    Print (Add [Multiply [IfThenElse (True,
+                                          Add [Multiply [Number 1]],
+                                          Add [Multiply [Number 2]])]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse always true if."
 
@@ -136,9 +138,9 @@ module ParsingCorrectManualTests =
                 let actualResult = makeAST correctInputFiles["falseIF"]
 
                 let expectedResult = [
-                    VarAssignment ("result", Add [Multiply [IfThenElse (False,
-                                                                         Add [Multiply [Var ("x", Undefined)]],
-                                                                         Add [Multiply [Number 2]])]])]
+                    Print (Add [Multiply [IfThenElse (False,
+                                          Add [Multiply [Number 1]],
+                                          Add [Multiply [Number 2]])]])]
 
                 Expect.equal actualResult expectedResult "Failed to parse always false if."
 
@@ -149,14 +151,14 @@ module ParsingCorrectManualTests =
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 100]])
                     VarAssignment ("y", Add [Multiply [Number 1]])
-                    VarAssignment ("r", Add [Multiply
+                    Print (             Add [Multiply
                                                      [IfThenElse (Expression (GreaterThan,
                                                                                      Add [Multiply [Var ("x", Undefined)]],
                                                                                      Add [Multiply [Var ("y", Undefined)]]),
                                                                   Add [Multiply [IfThenElse (Expression (LessThan,
                                                                                                                  Add [Multiply [Var ("x", Undefined)]],
                                                                                                                  Add [Multiply [Var ("y", Undefined)]]),
-                                                                                              Add [Multiply [Number 10]; Multiply [Var ("r", Undefined)]],
+                                                                                              Add [Multiply [Number 10]; Multiply [Var ("y", Undefined)]],
                                                                                               Add [Multiply [Number 2; Number 2]])]],
                                                                   Add [Multiply [Number 1]])]])]
 
@@ -293,7 +295,8 @@ module ParsingIncorrectManualTests =
                     VarAssignment ("x", BooleanExpr True);
                     VarAssignment ("y", Add [
                                             Multiply [Var ("x", Undefined)]
-                                            Multiply [Number 2]])]
+                                            Multiply [Number 2]])
+                    Print (Add [Multiply [Var ("y", Undefined)]])]
 
                 Expect.equal actualResult expectedResult "MismatchingTypes are still parsed correctly."
 

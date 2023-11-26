@@ -1,1 +1,1 @@
-result=if(false)then(x)else(2)
+print:if(false)then(1)else(2)
