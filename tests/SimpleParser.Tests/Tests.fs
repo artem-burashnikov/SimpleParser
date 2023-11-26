@@ -43,7 +43,7 @@ module Helper =
         | None -> failtest "incorrect code input"
         | Some(_, ast) -> ast
 
-module CorrectParsingManualTests =
+module ParsingCorrectManualTests =
     open Helper
 
     [<Tests>]
@@ -197,7 +197,6 @@ module CorrectParsingManualTests =
 
                 Expect.equal actualResult expectedResult "Failed to parse boolExpression."
 
-
             testCase "Parsing: boolValueFromIF"
             <| fun _ ->
                 let actualResult = makeAST correctInputFiles["boolValueFromIF"]
@@ -212,7 +211,7 @@ module CorrectParsingManualTests =
 
                 Expect.equal actualResult expectedResult "Failed to parse boolValueFromIF." ]
 
-module IncorrectParsingManualTests =
+module ParsingIncorrectManualTests =
     open Helper
 
     [<Tests>]
@@ -309,17 +308,14 @@ module IncorrectParsingManualTests =
                     VarAssignment ("x", Add [Multiply [IfThenElse (Expression (LessThan,
                                                                                Add [Multiply [Number 3]],
                                                                                Add [Multiply [Number 5]]),
-                                                       BooleanExpr (Expression (LessThan,
-                                                                                Add [Multiply [Var ("y", Undefined)]],
-                                                                                Add [Multiply [Number 3]])),
+                                                       Add [Multiply [Var ("y", Undefined); Number 3]],
                                                        BooleanExpr True)]])
                     Print (Add [Multiply [Var ("x", Undefined)]])]
-
 
                 Expect.equal actualResult expectedResult "complexMismatchingTypes: types are not interfered during parsing. Still has to be parsed correctly." ]
 
 
-module CorrectInterpreterManualTests =
+module InterpreterCorrectManualTests =
     open Helper
     open Interpreter
 
@@ -409,3 +405,19 @@ module CorrectInterpreterManualTests =
                 let expectedResult = 1
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate trueIF." ]
+
+
+module InterpreterIncorrectManualTests =
+    open Helper
+    open Interpreter
+
+    [<Tests>]
+    let tests =
+        testList "Type check" [
+            testCase "Interpreter: mismatchingTypes"
+            <| fun _ ->
+                Expect.throws (fun _ -> makeAST incorrectInputFiles["mismatchingTypes"] |> evalProgram |> ignore) "Addition of boolean and integer should have not been evaluated."
+
+            testCase "Interpreter: complexMismatchingTypes"
+            <| fun _ ->
+                Expect.throws (fun _ -> makeAST incorrectInputFiles["complexMismatchingTypes"] |> evalProgram |> ignore) "Multiplication of boolean and integer should have not been evaluated." ]
