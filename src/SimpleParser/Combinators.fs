@@ -25,7 +25,7 @@ let parseAlt (parser1: Parser<'A>) (parser2: Parser<'A>) : Parser<'A> =
         | parsedInput -> parsedInput
 
 let rec parseAltCombine =
-    fun parseList -> List.reduce parseAlt parseList
+    fun parsersList -> List.reduce parseAlt parsersList
 
 let fMap (fnc: 'R1 -> 'R2) (parser: Parser<'R1>) : Parser<'R2> =
     fun input ->
