@@ -14,28 +14,28 @@ let parseNumber =
     |> fMap (fun charList -> charList |> Array.ofList |> System.String |> int |> Number)
 
 let parseBooleanTrue =
-    parseSeq (parseIgnore (parseKeyWord "true")) (fun _ -> fMap (fun _ -> True) parseEpsilon)
+    parseSeq (parseKeyWord "true") (fun _ -> fMap (fun _ -> True) parseEpsilon)
 
 let parseBooleanFalse =
-    parseSeq (parseIgnore (parseKeyWord "false")) (fun _ -> fMap (fun _ -> False) parseEpsilon)
+    parseSeq (parseKeyWord "false") (fun _ -> fMap (fun _ -> False) parseEpsilon)
 
 let parseLessThanOrEqual =
-    parseSeq (parseIgnore (parseKeyWord "<=")) (fun _ -> fMap (fun _ -> LessThanOrEqual) parseEpsilon)
+    parseSeq (parseKeyWord "<=") (fun _ -> fMap (fun _ -> LessThanOrEqual) parseEpsilon)
 
 let parseNotEqual =
-    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
+    parseSeq (parseKeyWord "<>") (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
 
 let parseGreaterThanOrEqual =
-    parseSeq (parseIgnore (parseKeyWord "<>")) (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
+    parseSeq (parseKeyWord "<>") (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
 
 let parseEqual =
-    parseSeq (parseIgnore (parseKeyWord "=")) (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
+    parseSeq (parseKeyWord "=") (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
 
 let parseGreaterThan =
-    parseSeq (parseIgnore (parseKeyWord ">")) (fun _ -> fMap (fun _ -> GreaterThan) parseEpsilon)
+    parseSeq (parseKeyWord ">") (fun _ -> fMap (fun _ -> GreaterThan) parseEpsilon)
 
 let parseLessThen =
-    parseSeq (parseIgnore (parseKeyWord "<")) (fun _ -> fMap (fun _ -> LessThan) parseEpsilon)
+    parseSeq (parseKeyWord "<") (fun _ -> fMap (fun _ -> LessThan) parseEpsilon)
 
 let parseKeyWordIf = parseKeyWord "if"
 
