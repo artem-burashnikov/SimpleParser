@@ -7,6 +7,8 @@ open SimpleParser
 open SimpleParser.Combinators
 open SimpleParser.Definitions
 open SimpleParser.ExprParser
+open SimpleParser.Interpreter
+open SimpleParser.Generator
 
 module Helper =
     let correctTestDataPath =
@@ -40,7 +42,7 @@ module Helper =
             String.concat "\n" (File.ReadAllLines file)
 
         match run parseProgram programCode with
-        | None -> failtest "incorrect code input"
+        | None -> failtest $"Incorrect code input. Failed at: {programCode}"
         | Some(_, ast) -> ast
 
 module ParsingCorrectManualTests =
@@ -320,7 +322,6 @@ module ParsingIncorrectManualTests =
 
 module InterpreterCorrectManualTests =
     open Helper
-    open Interpreter
 
     [<Tests>]
     let tests =
@@ -412,7 +413,6 @@ module InterpreterCorrectManualTests =
 
 module InterpreterIncorrectManualTests =
     open Helper
-    open Interpreter
 
     [<Tests>]
     let tests =
@@ -424,3 +424,28 @@ module InterpreterIncorrectManualTests =
             testCase "Interpreter: complexMismatchingTypes"
             <| fun _ ->
                 Expect.throws (fun _ -> makeAST incorrectInputFiles["complexMismatchingTypes"] |> evalProgram |> ignore) "Multiplication of boolean and integer should have not been evaluated." ]
+
+
+module Generator =
+    open Helper
+    open Analyzer
+    open Generator
+
+    [<Tests>]
+    let tests =
+        testList "AST invariant" [
+            testCase "Generator x Parsing"
+            <| fun _ ->
+
+                let ctx = Context(Undefined, Dictionary<string, VarType * obj>())
+                let allFiles = Seq.fold (fun result x -> x :: result) [] correctTestFiles
+                let allAST = Seq.map makeAST allFiles |> Seq.toList |> List.map (optimize ctx)
+                let allActualResults =
+                    List.map generateCode allAST
+                    |> List.map (fun input ->
+                    match run parseProgram input with
+                    | Some(_, res) -> optimize ctx res
+                    | None -> failwith "Couldn't parse input"
+                    )
+
+                Expect.sequenceEqual allActualResults allAST "" ]

@@ -7,3 +7,4 @@ src/SimpleParser/Combinators.fs
 src/SimpleParser/ExprParser.fs
 src/SimpleParser/Interpreter.fs
 src/SimpleParser/Analyzer.fs
+src/SimpleParser/Generator.fs
