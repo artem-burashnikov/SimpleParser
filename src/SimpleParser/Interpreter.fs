@@ -91,6 +91,12 @@ let rec evalStmt (context: Context) stmt =
         let res = evalBool context expr
         context.BoolResult <- res
         BoolResult(varName, res)
+    | Print (Number n) ->
+        let res = evalInt context (Number n)
+        context.IntResult <- res
+        Unit
+    | Print (Var _) ->
+        Unit
     | Print expr when context.ExprType = Integer ->
         let res = evalInt context expr
         context.IntResult <- res
@@ -103,9 +109,9 @@ let rec evalStmt (context: Context) stmt =
 
 let evalProgram (statements: list<SourceAst>) =
 
-    let globalContext = Context(Undefined, Dictionary<string, VarType * obj>())
+    let evaluationContext = Context(Undefined, Dictionary<string, VarType * obj>())
 
-    let optimizedStatements = optimize globalContext statements
+    let optimizedStatements = optimize evaluationContext statements
 
     let folder (ctx: Context) (stmt: SourceAst) =
         let res = evalStmt ctx stmt
@@ -125,4 +131,4 @@ let evalProgram (statements: list<SourceAst>) =
 
         ctx
 
-    List.fold folder globalContext optimizedStatements
+    List.fold folder evaluationContext optimizedStatements

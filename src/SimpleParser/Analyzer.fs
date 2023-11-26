@@ -2,6 +2,40 @@ module SimpleParser.Analyzer
 
 open SimpleParser.Definitions
 
+let removeUnusedVars (context: Context) statements =
+    let rec _go (context: Context) expr =
+        match expr with
+        | Var(varName, varType) ->
+            if not (context.VariablesCtx.ContainsKey varName) then
+                context.VariablesCtx.Add (varName, (varType, None))
+        | BooleanExpr (Expression(_,  lhs, rhs)) ->
+            _go context lhs
+            _go context rhs
+        | Multiply exprList
+        | Add exprList -> List.iter (_go context) exprList
+        | IfThenElse (True, trueBranch, _) -> _go context trueBranch
+        | IfThenElse (False, _, elseBranch) -> _go context elseBranch
+        | IfThenElse (Expression(_, lhs, rhs), trueBranch, elseBranch) ->
+            _go context lhs
+            _go context rhs
+            _go context trueBranch
+            _go context elseBranch
+        | _ -> ()
+
+    let folder stmt clearedStmtsList =
+        match stmt with
+        | VarAssignment(varName, expr) ->
+            if context.VariablesCtx.ContainsKey varName then
+                _go context expr
+                VarAssignment(varName, expr) :: clearedStmtsList
+            else
+                clearedStmtsList
+        | Print expr ->
+            _go context expr
+            (Print expr) :: clearedStmtsList
+
+    List.foldBack folder statements []
+
 let optimize (context: Context) statements =
     let rec inner (context: Context) expression =
         match expression with
@@ -64,4 +98,4 @@ let optimize (context: Context) statements =
             let evaluatedValue = inner context expression
             Print(evaluatedValue)
 
-    List.map (optimizeStatements context) statements
+    List.map (optimizeStatements context) (removeUnusedVars context statements)
