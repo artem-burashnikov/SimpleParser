@@ -13,22 +13,23 @@ let optimize (context: Context) statements =
                 context.ExprType <- Boolean
                 BooleanExpr boolVal
             | Expression(op, lhs, rhs) ->
+                context.ExprType <- Boolean
                 let analyzedLhs = inner context lhs
                 let analyzedRhs = inner context rhs
                 BooleanExpr(Expression(op, analyzedLhs, analyzedRhs))
             | _ -> failwith "Type integer and boolean value in boolean expression don't match."
         | Multiply [ x ] -> inner context x
-        | Multiply [ lhs; rhs ] ->
-            let analyzedLhs = inner context lhs
-            let analyzedRhs = inner context rhs
+        | Multiply (hd :: tl) ->
             context.ExprType <- Integer
-            Multiply [analyzedLhs; analyzedRhs]
+            let analyzedHead = inner context hd
+            let analyzedTail = List.map (inner context) tl
+            Multiply (analyzedHead :: analyzedTail)
         | Add [ x ] -> inner context x
-        | Add [ lhs; rhs ] ->
-            let analyzedLhs = inner context lhs
-            let analyzedRhs = inner context rhs
+        | Add (hd :: tl) ->
             context.ExprType <- Integer
-            Add [analyzedLhs; analyzedRhs]
+            let analyzedHead = inner context hd
+            let analyzedTail = List.map (inner context) tl
+            Add (analyzedHead :: analyzedTail)
         | IfThenElse(conditional, trueBranch, elseBranch) ->
             match conditional with
             | True -> inner context trueBranch
@@ -44,12 +45,15 @@ let optimize (context: Context) statements =
                 Var(varName, fst context.VariablesCtx[varName])
             else
                 match ownVarType, context.ExprType with
-                | _, Undefined -> Var(varName, ownVarType)
-                | Undefined, exprType -> Var(varName, exprType)
-                | Integer, Integer -> Var(varName, Integer)
-                | Boolean, Boolean -> Var(varName, Boolean)
-                | _ -> failwith $"The type {ownVarType.ToString()} of variable {varName} doesn't match the inferred type of expression {context.ExprType}."
-        | e -> failwith $"Unhandled exception. Expression that caused en error:\n{e}"
+                | Integer, _
+                | Undefined, Integer
+                | Undefined, Boolean -> Var(varName, Integer)
+                | Boolean, Undefined -> Var(varName, Boolean)
+                | Undefined, Undefined -> Var(varName, Undefined)
+                | Boolean, Integer -> failwith "Boolean var and Integer expr are not supported."
+                | Boolean, Boolean -> failwith "Boolean var and Boolean expr are not supported."
+
+        | e -> failwith $"Unhandled exception in optimize. Expression type: %A{context.ExprType} Expression that caused en error:\n{e}"
 
     let optimizeStatements (context: Context) statement =
         match statement with
