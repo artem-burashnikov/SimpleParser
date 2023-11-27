@@ -14,5 +14,9 @@
     <ItemGroup>
         <ProjectReference Include="../../src/SimpleParser/SimpleParser.fsproj" />
     </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Expecto.FsCheck" Version="10.1.0" />
+      <PackageReference Include="FsCheck" Version="2.16.6" />
+    </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -3,6 +3,7 @@ namespace SimpleParser.Tests
 open System.Collections.Generic
 open Expecto
 open System.IO
+open FsCheck
 open SimpleParser
 open SimpleParser.Combinators
 open SimpleParser.Definitions
@@ -37,13 +38,105 @@ module Helper =
 
     let incorrectInputFiles = Seq.fold folder (Dictionary<string, string>()) incorrectTestFiles
 
-    let makeAST file =
-        let programCode =
-            String.concat "\n" (File.ReadAllLines file)
+    let makeCodeFromFile file = String.concat "\n" (File.ReadAllLines file)
 
-        match run parseProgram programCode with
-        | None -> failtest $"Incorrect code input. Failed at: {programCode}"
+    let makeAst code =
+        match run parseProgram code with
+        | None -> failtest $"Incorrect code input. Failed at: {code}"
         | Some(_, ast) -> ast
+
+module TestDataGenerator =
+
+    type ExprGenerator() =
+        static member Ast() =
+
+            let getSize = Gen.choose(0, 10) |> Gen.sample 0 1 |> List.head
+
+            let genRelationalOperator = Arb.generate<RelationalOperator>
+
+            let genBoolValue = Gen.elements [| True; False |]
+
+            let genVariableName = Gen.elements [| 'a' .. 'z' |] |> Gen.map string
+
+            let genIdentifier = genVariableName |> Gen.map (fun ch -> Var(ch, Undefined))
+
+
+            let rec genArithmeticExpression size =
+
+                let genNumber = Gen.choose(1, 100) |> Gen.map Number
+
+                let rec genMultiply depth =
+                    match depth with
+                    | n when n = 0 -> Gen.oneof [
+                        genNumber           |> Gen.map (fun n -> Multiply [n])
+                        genIdentifier       |> Gen.map (fun n -> Multiply [n])
+                        ]
+                    | n when n > 0 -> Gen.listOfLength n (Gen.oneof [genNumber; genIdentifier]) |> Gen.map Multiply
+                    | e -> failwith $"genMultiply Depth parameter should be positive. Depth: {e}"
+
+                and genAdd depth =
+                    match depth with
+                    | n when n = 0 -> (genMultiply 0) |> Gen.map (fun x -> Add [x])
+                    | n when n > 0 -> Gen.listOfLength n (genMultiply (n / 2)) |> Gen.map Add
+                    | e -> failwith $"genMultiply Depth parameter should be positive. Depth: {e}"
+
+                genAdd size
+
+
+            and genBooleanExpression size =
+                Gen.oneof [
+                    genBoolValue
+                    Gen.zip3 genRelationalOperator (genArithmeticExpression (size / 2)) (genArithmeticExpression (size / 2)) |> Gen.map Expression
+                ]
+
+            and genIfThenElse size =
+                match size with
+                | n when n = 0 ->
+                    Gen.oneof [
+                        Gen.zip3 (genBooleanExpression (size / 2)) (genArithmeticExpression (size / 2)) (genArithmeticExpression (size / 2))
+                        Gen.zip3 (genBooleanExpression (size / 2)) (genBooleanExpression (size / 2) |> Gen.map BooleanExpr) (genBooleanExpression getSize |> Gen.map BooleanExpr)
+                        ]
+                        |> Gen.map IfThenElse
+                | n when n > 0 ->
+                    Gen.oneof [
+                        Gen.zip3 (genBooleanExpression (size / 2)) (genArithmeticExpression (size / 2)) (genArithmeticExpression (size / 2))
+                        Gen.zip3 (genBooleanExpression (size / 2)) (genBooleanExpression (size / 2) |> Gen.map BooleanExpr) (genBooleanExpression (size / 2) |> Gen.map BooleanExpr)
+                        Gen.zip3 (genBooleanExpression (size / 2)) (genIfThenElse (size / 2) |> Gen.map (fun x -> Add [Multiply [x]])) (genIfThenElse (size / 2) |> Gen.map (fun x -> Add [Multiply [x]]))
+                        ]
+                        |> Gen.map IfThenElse
+                | _ -> failwith "Size of ifThenElse must be positive."
+
+            let genAst size =
+                Gen.listOfLength size
+                    (Gen.oneof [
+                        Gen.oneof [
+                            genArithmeticExpression size
+                            genBooleanExpression    size |> Gen.map BooleanExpr
+                            genIfThenElse           size |> Gen.map (fun x -> Add [Multiply [x]])
+                        ]
+                        |> Gen.map (fun expr -> VarAssignment(genVariableName |> Gen.sample 1 1 |> List.head, expr))
+
+                        Gen.oneof [
+                            genArithmeticExpression size
+                            genBooleanExpression    size |> Gen.map BooleanExpr
+                            genIfThenElse           size |> Gen.map (fun x -> Add [Multiply [x]])
+                        ]
+                        |> Gen.map Print
+                    ])
+
+            gen {
+                let! depth = Gen.choose (2, 10)
+                return! genAst depth}
+            |> Arb.fromGen
+
+    let addToConfig config =
+        { config with
+            arbitrary =
+                typeof<ExprGenerator> :: config.arbitrary }
+
+    let config = addToConfig FsCheckConfig.defaultConfig
+    let testCustomProp name = testPropertyWithConfig config name
+
 
 module ParsingCorrectManualTests =
     open Helper
@@ -53,7 +146,7 @@ module ParsingCorrectManualTests =
         testList "AST comparison" [
             testCase "Parsing: identifier"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["identifier"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["identifier"]
 
                 let expectedResult = [
                     VarAssignment ("identifier", Add [Multiply [Number 42]])
@@ -63,7 +156,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: addition"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["addition"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["addition"]
 
                 let expectedResult = [
                     VarAssignment ("a", Add [Multiply [Number 5]])
@@ -75,7 +168,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: multiplication"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["multiplication"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["multiplication"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 8]])
@@ -88,7 +181,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: arithmetic"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["arithmetic"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["arithmetic"]
 
                 let expectedResult = [
                     VarAssignment ("a", Add [Multiply [Number 3]])
@@ -101,7 +194,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: arithmeticIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["arithmeticIF"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["arithmeticIF"]
 
                 let expectedResult = [
                     VarAssignment ("y", Add [Multiply [Number 5]])
@@ -126,7 +219,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: trueIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["trueIF"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["trueIF"]
 
                 let expectedResult = [
                     Print (Add [Multiply [IfThenElse (True,
@@ -137,7 +230,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: falseIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["falseIF"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["falseIF"]
 
                 let expectedResult = [
                     Print (Add [Multiply [IfThenElse (False,
@@ -148,7 +241,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: nestedIFs"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["nestedIFs"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["nestedIFs"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 100]])
@@ -168,7 +261,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: trueAssignment"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["trueAssignment"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["trueAssignment"]
 
                 let expectedResult = [
                     VarAssignment ("x", BooleanExpr True)
@@ -179,7 +272,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: falseAssignment"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["falseAssignment"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["falseAssignment"]
 
                 let expectedResult = [
                     VarAssignment ("x", BooleanExpr False)
@@ -190,7 +283,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: boolExpression"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["boolExpression"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["boolExpression"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 2]])
@@ -203,7 +296,7 @@ module ParsingCorrectManualTests =
 
             testCase "Parsing: boolValueFromIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["boolValueFromIF"]
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["boolValueFromIF"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [IfThenElse (True,
@@ -223,15 +316,15 @@ module ParsingIncorrectManualTests =
         testList "Deliberate mistakes" [
             testCase "Parsing: invalidAssignment"
             <| fun _ ->
-                Expect.throws (fun _ -> makeAST incorrectInputFiles["invalidAssignment"] |> ignore) "Invalid assignment has been parsed."
+                Expect.throws (fun _ -> makeAst <| makeCodeFromFile incorrectInputFiles["invalidAssignment"] |> ignore) "Invalid assignment has been parsed."
 
             testCase "Parsing: invalidIdentifier"
             <| fun _ ->
-                Expect.throws (fun _ -> makeAST incorrectInputFiles["invalidIdentifier"] |> ignore) "Invalid identifier has been parsed."
+                Expect.throws (fun _ -> makeAst <| makeCodeFromFile incorrectInputFiles["invalidIdentifier"] |> ignore) "Invalid identifier has been parsed."
 
             testCase "Parsing: invalidRelationalOp"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["invalidRelationalOp"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["invalidRelationalOp"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Var ("if", Undefined)]])
@@ -241,7 +334,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: missingElse"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["missingElse"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["missingElse"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Var ("if", Undefined)]])
@@ -251,7 +344,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: missingThen"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["missingThen"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["missingThen"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Var ("if", Undefined)]])
@@ -261,7 +354,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: missingPrint"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["missingPrint"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["missingPrint"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Number 10]])
@@ -271,7 +364,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: missingConditionalParentheses"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["missingConditionalParentheses"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["missingConditionalParentheses"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Var ("iftruethen", Undefined)]])
@@ -281,7 +374,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: statementInBranch"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["statementInBranch"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["statementInBranch"]
 
                 let expectedResult = [
                     VarAssignment ("x", Add [Multiply [Var ("if", Undefined)]])
@@ -291,7 +384,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: mismatchingTypes"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["mismatchingTypes"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["mismatchingTypes"]
 
                 let expectedResult = [
                     VarAssignment ("x", BooleanExpr True);
@@ -304,7 +397,7 @@ module ParsingIncorrectManualTests =
 
             testCase "Parsing: complexMismatchingTypes"
             <| fun _ ->
-                let actualResult = makeAST incorrectInputFiles["complexMismatchingTypes"]
+                let actualResult = makeAst <| makeCodeFromFile incorrectInputFiles["complexMismatchingTypes"]
 
                 let expectedResult = [
                     VarAssignment ("y", BooleanExpr (Expression (GreaterThan,
@@ -328,84 +421,84 @@ module InterpreterCorrectManualTests =
         testList "AST evaluation" [
             testCase "Interpreter: addition"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["addition"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["addition"] |> evalProgram
                 let expectedResult = 12
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate addition."
 
             testCase "Interpreter: arithmetic"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["arithmetic"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["arithmetic"] |> evalProgram
                 let expectedResult = 13
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate multiplication."
 
             testCase "Interpreting: arithmeticIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["arithmeticIF"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["arithmeticIF"] |> evalProgram
                 let expectedResult = 102
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate arithmeticIF."
 
             testCase "Interpreter: boolExpression"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["boolExpression"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["boolExpression"] |> evalProgram
                 let expectedResult = true
 
                 Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate bool expression."
 
             testCase "Interpreter: boolValueFromIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["boolValueFromIF"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["boolValueFromIF"] |> evalProgram
                 let expectedResult = true
 
                 Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate boolValueFromIF."
 
             testCase "Interpreter: falseAssignment"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["falseAssignment"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["falseAssignment"] |> evalProgram
                 let expectedResult = false
 
                 Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate falseAssignment."
 
             testCase "Interpreter: falseIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["falseIF"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["falseIF"] |> evalProgram
                 let expectedResult = 2
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate falseIF."
 
             testCase "Interpreter: identifier"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["identifier"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["identifier"] |> evalProgram
                 let expectedResult = 42
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate identifier."
 
             testCase "Interpreter: multiplication"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["multiplication"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["multiplication"] |> evalProgram
                 let expectedResult = 24
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate identifier."
 
             testCase "Interpreter: nestedIFs"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["nestedIFs"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["nestedIFs"] |> evalProgram
                 let expectedResult = 4
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate nestedIFs."
 
             testCase "Interpreter: trueAssignment"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["trueAssignment"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["trueAssignment"] |> evalProgram
                 let expectedResult = true
 
                 Expect.equal actualResult.BoolResult expectedResult "Failed to evaluate trueAssignment."
 
             testCase "Interpreter: trueIF"
             <| fun _ ->
-                let actualResult = makeAST correctInputFiles["trueIF"] |> evalProgram
+                let actualResult = makeAst <| makeCodeFromFile correctInputFiles["trueIF"] |> evalProgram
                 let expectedResult = 1
 
                 Expect.equal actualResult.IntResult expectedResult "Failed to evaluate trueIF." ]
@@ -419,33 +512,38 @@ module InterpreterIncorrectManualTests =
         testList "Type check" [
             testCase "Interpreter: mismatchingTypes"
             <| fun _ ->
-                Expect.throws (fun _ -> makeAST incorrectInputFiles["mismatchingTypes"] |> evalProgram |> ignore) "Addition of boolean and integer should have not been evaluated."
+                Expect.throws (fun _ -> makeAst <| makeCodeFromFile incorrectInputFiles["mismatchingTypes"] |> evalProgram |> ignore) "Addition of boolean and integer should have not been evaluated."
 
             testCase "Interpreter: complexMismatchingTypes"
             <| fun _ ->
-                Expect.throws (fun _ -> makeAST incorrectInputFiles["complexMismatchingTypes"] |> evalProgram |> ignore) "Multiplication of boolean and integer should have not been evaluated." ]
+                Expect.throws (fun _ -> makeAst <| makeCodeFromFile incorrectInputFiles["complexMismatchingTypes"] |> evalProgram |> ignore) "Multiplication of boolean and integer should have not been evaluated." ]
 
 
 module Generator =
-    open Helper
-    open Analyzer
-    open Generator
+     open Helper
+     open Analyzer
+     open TestDataGenerator
 
-    [<Tests>]
-    let tests =
-        testList "AST invariant" [
-            testCase "Generator x Parsing"
-            <| fun _ ->
+     [<Tests>]
+     let tests =
+         testList "AST invariant" [
+             testCase "Generator x Parsing"
+             <| fun _ ->
 
-                let ctx = Context(Undefined, Dictionary<string, VarType * obj>())
-                let allFiles = Seq.fold (fun result x -> x :: result) [] correctTestFiles
-                let allAST = Seq.map makeAST allFiles |> Seq.toList |> List.map (optimize ctx)
-                let allActualResults =
-                    List.map generateCode allAST
-                    |> List.map (fun input ->
-                    match run parseProgram input with
-                    | Some(_, res) -> optimize ctx res
-                    | None -> failwith "Couldn't parse input"
-                    )
+                 let ctx = Context(Undefined, Dictionary<string, VarType * obj>())
+                 let allFiles = Seq.fold (fun result x -> x :: result) [] correctTestFiles
+                 let allAST = Seq.map (fun filePath -> makeAst <| makeCodeFromFile filePath) allFiles |> Seq.toList |> List.map (optimize ctx)
+                 let allActualResults =
+                     List.map generateCode allAST
+                     |> List.map (fun input ->
+                     match run parseProgram input with
+                     | Some(_, res) -> optimize ctx res
+                     | None -> failwith "Couldn't parse input"
+                     )
 
-                Expect.sequenceEqual allActualResults allAST "" ]
+                 Expect.sequenceEqual allActualResults allAST ""
+
+             testCustomProp "Auto generator x parsing"
+             <| fun (program: SourceAst list) ->
+                 let programInvariant = generateCode program |> makeAst
+                 Expect.sequenceEqual programInvariant program "" ]
