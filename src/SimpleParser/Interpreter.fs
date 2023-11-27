@@ -48,7 +48,7 @@ and evalInt (context: Context) expr =
                 unbox<int> (snd variablesCtx[varName])
             else
                 failwithf $"Var with name {varName} is not declared."
-    | IfThenElse(condition: BooleanValue, trueBranch, elseBranch) ->
+    | IfThenElse(condition, trueBranch, elseBranch) ->
         if evalConditional context condition then
             (evalInt context trueBranch)
         else
