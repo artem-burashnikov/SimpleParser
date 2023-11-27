@@ -26,7 +26,7 @@ let parseNotEqual =
     parseSeq (parseKeyWord "<>") (fun _ -> fMap (fun _ -> NotEqual) parseEpsilon)
 
 let parseGreaterThanOrEqual =
-    parseSeq (parseKeyWord "<>") (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
+    parseSeq (parseKeyWord ">=") (fun _ -> fMap (fun _ -> GreaterThanOrEqual) parseEpsilon)
 
 let parseEqual =
     parseSeq (parseKeyWord "=") (fun _ -> fMap (fun _ -> Equal) parseEpsilon)
@@ -53,12 +53,12 @@ and parseAdd input =
 
 and parseConditionalExpression input =
     let parseOp = parseAltCombine [
+        parseGreaterThanOrEqual
+        parseGreaterThan
         parseLessThanOrEqual
         parseNotEqual
-        parseGreaterThanOrEqual
-        parseEqual
-        parseGreaterThan
         parseLessThen
+        parseEqual
     ]
 
     parseSeq parseAdd (fun lhs ->
